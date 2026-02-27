@@ -61,3 +61,6 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# Report and internal docs (excluded from repo)
+docs/
