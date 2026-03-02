@@ -1,6 +1,12 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { levelAPI } from '../services/api'
 import './AdminPanel.css'
+
+interface LevelOption {
+  id: number
+  title: string
+  order: number
+}
 
 const CELL_TYPES = [
   { value: 'empty', label: 'Пусто', short: '·' },
@@ -25,41 +31,82 @@ function makeCells(width: number, height: number, fill: string = 'empty'): strin
   return Array(height).fill(null).map(() => Array(width).fill(fill))
 }
 
+/** Количество непустых строк в эталонном коде — используется как golden_steps_count */
+function countCodeLines(code: string): number {
+  return code.trim().split(/\r?\n/).filter(l => l.trim()).length
+}
+
+const emptyLevelData = () => ({
+  title: '',
+  description: '',
+  narrative: '',
+  order: 1,
+  difficulty: 1,
+  golden_code: '',
+  golden_steps_count: 0,
+  map_data: {
+    width: 5,
+    height: 5,
+    cells: makeCells(5, 5)
+  }
+})
+
 export default function AdminPanel() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [selectedCellType, setSelectedCellType] = useState<string>('empty')
-  const [levelData, setLevelData] = useState({
-    title: '',
-    description: '',
-    narrative: '',
-    order: 1,
-    difficulty: 1,
-    golden_code: '',
-    golden_steps_count: 0,
-    map_data: {
-      width: 5,
-      height: 5,
-      cells: makeCells(5, 5)
+  const [levels, setLevels] = useState<LevelOption[]>([])
+  const [editingLevelId, setEditingLevelId] = useState<number | null>(null)
+  const [levelData, setLevelData] = useState(emptyLevelData())
+
+  useEffect(() => {
+    levelAPI.getAll().then(res => setLevels(res.data || [])).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (editingLevelId == null) {
+      setLevelData(emptyLevelData())
+      return
     }
-  })
+    levelAPI.getById(editingLevelId).then(res => {
+      const l = res.data
+      const md = l.map_data || { width: 5, height: 5, cells: makeCells(5, 5) }
+      const cells = Array.isArray(md.cells) && md.cells.length
+        ? md.cells
+        : makeCells(md.width || 5, md.height || 5)
+      setLevelData({
+        title: l.title || '',
+        description: l.description || '',
+        narrative: l.narrative || '',
+        order: l.order ?? 1,
+        difficulty: Math.min(5, Math.max(1, Number(l.difficulty) || 1)),
+        golden_code: l.golden_code || '',
+        golden_steps_count: l.golden_steps_count ?? 0,
+        map_data: { width: md.width || 5, height: md.height || 5, cells }
+      })
+    }).catch(() => setMessage({ type: 'error', text: 'Не удалось загрузить уровень' }))
+  }, [editingLevelId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage(null)
+    const payload = {
+      ...levelData,
+      golden_steps_count: countCodeLines(levelData.golden_code)
+    }
     try {
-      await levelAPI.create(levelData)
-      setMessage({ type: 'success', text: 'Уровень создан успешно!' })
-      setLevelData({
-        ...levelData,
-        title: '',
-        description: '',
-        narrative: '',
-        golden_code: ''
-      })
+      if (editingLevelId != null) {
+        await levelAPI.update(editingLevelId, payload)
+        setMessage({ type: 'success', text: 'Уровень обновлён!' })
+      } else {
+        await levelAPI.create(payload)
+        setMessage({ type: 'success', text: 'Уровень создан успешно!' })
+        setLevelData(emptyLevelData())
+        levelAPI.getAll().then(res => setLevels(res.data || []))
+      }
     } catch (error: any) {
       const d = error.response?.data?.detail
-      const text = Array.isArray(d) ? (d[0]?.msg || d[0] || d.join(', ')) : (d || 'Не удалось создать уровень')
-      setMessage({ type: 'error', text: typeof text === 'string' ? text : 'Не удалось создать уровень' })
+      const text = Array.isArray(d) ? (d[0]?.msg || d[0] || d.join(', ')) : (d || (editingLevelId != null ? 'Не удалось обновить уровень' : 'Не удалось создать уровень'))
+      setMessage({ type: 'error', text: typeof text === 'string' ? text : 'Ошибка' })
     }
   }
 
@@ -157,6 +204,33 @@ export default function AdminPanel() {
       )}
       <form onSubmit={handleSubmit} className="level-form">
         <div className="form-section">
+          <h2>Режим</h2>
+          <div className="form-group">
+            <label>Уровень</label>
+            <div className="level-select-wrap">
+              <select
+                value={editingLevelId ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setEditingLevelId(v === '' ? null : parseInt(v, 10))
+                }}
+                className="level-select-edit"
+                aria-label="Выберите уровень для редактирования"
+              >
+                <option value="">— Новый уровень —</option>
+                {levels.map(l => (
+                  <option key={l.id} value={l.id}>
+                    #{l.order} {l.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <span className="form-hint">
+              {editingLevelId != null ? 'Редактирование: измените поля и нажмите «Сохранить»' : 'Выберите уровень для редактирования или оставьте «Новый уровень» для создания'}
+            </span>
+          </div>
+        </div>
+        <div className="form-section">
           <h2>Основная информация</h2>
           
           <div className="form-group">
@@ -191,25 +265,51 @@ export default function AdminPanel() {
           <div className="form-row">
             <div className="form-group">
               <label>Порядок</label>
-              <input
-                type="number"
-                value={levelData.order}
-                onChange={(e) => setLevelData({ ...levelData, order: parseInt(e.target.value) })}
-                min="1"
-                required
-              />
+              <div className="value-stepper">
+                <button
+                  type="button"
+                  className="stepper-btn"
+                  onClick={() => setLevelData({ ...levelData, order: Math.max(1, levelData.order - 1) })}
+                  disabled={levelData.order <= 1}
+                  aria-label="Уменьшить порядок"
+                >
+                  −
+                </button>
+                <span className="stepper-value">{levelData.order}</span>
+                <button
+                  type="button"
+                  className="stepper-btn"
+                  onClick={() => setLevelData({ ...levelData, order: levelData.order + 1 })}
+                  aria-label="Увеличить порядок"
+                >
+                  +
+                </button>
+              </div>
             </div>
             
             <div className="form-group">
-              <label>Сложность (1-5)</label>
-              <input
-                type="number"
-                value={levelData.difficulty}
-                onChange={(e) => setLevelData({ ...levelData, difficulty: parseInt(e.target.value) })}
-                min="1"
-                max="5"
-                required
-              />
+              <label>Сложность (1–5)</label>
+              <div className="value-stepper">
+                <button
+                  type="button"
+                  className="stepper-btn"
+                  onClick={() => setLevelData({ ...levelData, difficulty: Math.max(1, levelData.difficulty - 1) })}
+                  disabled={levelData.difficulty <= 1}
+                  aria-label="Уменьшить сложность"
+                >
+                  −
+                </button>
+                <span className="stepper-value">{levelData.difficulty}</span>
+                <button
+                  type="button"
+                  className="stepper-btn"
+                  onClick={() => setLevelData({ ...levelData, difficulty: Math.min(5, levelData.difficulty + 1) })}
+                  disabled={levelData.difficulty >= 5}
+                  aria-label="Увеличить сложность"
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -239,26 +339,54 @@ export default function AdminPanel() {
             <div className="map-size-row">
               <span className="map-size-label">Размер поля:</span>
               <div className="map-size-inputs">
-                <label>
+                <label className="map-size-field">
                   <span>Ширина</span>
-                  <input
-                    type="number"
-                    min={MIN_SIZE}
-                    max={MAX_SIZE}
-                    value={levelData.map_data.width}
-                    onChange={(e) => setMapSize(parseInt(e.target.value) || MIN_SIZE, levelData.map_data.height)}
-                  />
+                  <div className="value-stepper">
+                    <button
+                      type="button"
+                      className="stepper-btn"
+                      onClick={() => setMapSize(Math.max(MIN_SIZE, levelData.map_data.width - 1), levelData.map_data.height)}
+                      disabled={levelData.map_data.width <= MIN_SIZE}
+                      aria-label="Уменьшить ширину"
+                    >
+                      −
+                    </button>
+                    <span className="stepper-value">{levelData.map_data.width}</span>
+                    <button
+                      type="button"
+                      className="stepper-btn"
+                      onClick={() => setMapSize(Math.min(MAX_SIZE, levelData.map_data.width + 1), levelData.map_data.height)}
+                      disabled={levelData.map_data.width >= MAX_SIZE}
+                      aria-label="Увеличить ширину"
+                    >
+                      +
+                    </button>
+                  </div>
                 </label>
                 <span className="map-size-sep">×</span>
-                <label>
+                <label className="map-size-field">
                   <span>Высота</span>
-                  <input
-                    type="number"
-                    min={MIN_SIZE}
-                    max={MAX_SIZE}
-                    value={levelData.map_data.height}
-                    onChange={(e) => setMapSize(levelData.map_data.width, parseInt(e.target.value) || MIN_SIZE)}
-                  />
+                  <div className="value-stepper">
+                    <button
+                      type="button"
+                      className="stepper-btn"
+                      onClick={() => setMapSize(levelData.map_data.width, Math.max(MIN_SIZE, levelData.map_data.height - 1))}
+                      disabled={levelData.map_data.height <= MIN_SIZE}
+                      aria-label="Уменьшить высоту"
+                    >
+                      −
+                    </button>
+                    <span className="stepper-value">{levelData.map_data.height}</span>
+                    <button
+                      type="button"
+                      className="stepper-btn"
+                      onClick={() => setMapSize(levelData.map_data.width, Math.min(MAX_SIZE, levelData.map_data.height + 1))}
+                      disabled={levelData.map_data.height >= MAX_SIZE}
+                      aria-label="Увеличить высоту"
+                    >
+                      +
+                    </button>
+                  </div>
                 </label>
               </div>
             </div>
@@ -335,27 +463,31 @@ export default function AdminPanel() {
             <label>Эталонный код</label>
             <textarea
               value={levelData.golden_code}
-              onChange={(e) => setLevelData({ ...levelData, golden_code: e.target.value })}
+              onChange={(e) => {
+                const code = e.target.value
+                setLevelData({
+                  ...levelData,
+                  golden_code: code,
+                  golden_steps_count: countCodeLines(code)
+                })
+              }}
               rows={8}
               placeholder="вперед&#10;налево&#10;вперед"
               required
             />
           </div>
           
-          <div className="form-group">
+          <div className="form-group form-group-readonly">
             <label>Количество шагов в эталоне</label>
-            <input
-              type="number"
-              value={levelData.golden_steps_count}
-              onChange={(e) => setLevelData({ ...levelData, golden_steps_count: parseInt(e.target.value) })}
-              min="0"
-              required
-            />
+            <div className="readonly-steps">
+              <span className="readonly-steps-value">{countCodeLines(levelData.golden_code)}</span>
+              <span className="readonly-steps-hint">подсчитано по числу строк</span>
+            </div>
           </div>
         </div>
         
         <button type="submit" className="submit-btn">
-          Создать уровень
+          {editingLevelId != null ? 'Сохранить изменения' : 'Создать уровень'}
         </button>
       </form>
     </div>

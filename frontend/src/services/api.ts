@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '../store/authStore'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -17,6 +18,25 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
+
+const PUBLIC_PATHS = new Set<string>(['/', '/login', '/register'])
+
+// On 401 (expired/invalid token) — logout; redirect only from non-public pages
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      useAuthStore.getState().logout()
+      const currentPath = window.location.pathname
+      const isLoginRequest = !!error.config?.url?.includes('/auth/login')
+
+      if (!isLoginRequest && !PUBLIC_PATHS.has(currentPath)) {
+        window.location.pathname = '/'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
 
 // Auth API
 export const authAPI = {

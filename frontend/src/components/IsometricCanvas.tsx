@@ -138,10 +138,10 @@ export default function IsometricCanvas({ mapData, robotHistory }: Props) {
       drawInsetDiamond(ctx, isoX, isoY, 0.86, 'rgba(0,0,0,0.12)', 'rgba(255,255,255,0.08)', 1)
 
       // Glowing seams (like lab panels)
-      ctx.strokeStyle = 'rgba(183, 148, 246, 0.35)'
+      ctx.strokeStyle = 'rgba(139, 126, 216, 0.35)'
       ctx.lineWidth = 1
       ctx.shadowBlur = 10
-      ctx.shadowColor = 'rgba(183, 148, 246, 0.35)'
+      ctx.shadowColor = 'rgba(139, 126, 216, 0.35)'
       ctx.beginPath()
       ctx.moveTo(top.x, top.y)
       ctx.lineTo(bottom.x, bottom.y)
@@ -187,10 +187,10 @@ export default function IsometricCanvas({ mapData, robotHistory }: Props) {
       stripe(bottom.x, bottom.y, left.x, left.y)
 
       // Side seam glow (vertical edges)
-      ctx.strokeStyle = 'rgba(183, 148, 246, 0.22)'
+      ctx.strokeStyle = 'rgba(139, 126, 216, 0.22)'
       ctx.lineWidth = 2
       ctx.shadowBlur = 14
-      ctx.shadowColor = 'rgba(183, 148, 246, 0.25)'
+      ctx.shadowColor = 'rgba(139, 126, 216, 0.25)'
       // Left vertical edge
       ctx.beginPath()
       ctx.moveTo(left.x, left.y)
@@ -298,7 +298,7 @@ export default function IsometricCanvas({ mapData, robotHistory }: Props) {
         ctx.fill()
 
         // 5) Обводка только видимых рёбер: без нижнего края (где стена стыкуется с полом)
-        ctx.strokeStyle = 'rgba(183, 148, 246, 0.28)'
+        ctx.strokeStyle = 'rgba(139, 126, 216, 0.28)'
         ctx.lineWidth = 1
         // Верх передней грани
         ctx.beginPath()
@@ -348,8 +348,8 @@ export default function IsometricCanvas({ mapData, robotHistory }: Props) {
       )
       
       if (type === 'start') {
-        topGradient.addColorStop(0, '#b794f6')
-        topGradient.addColorStop(1, '#7c3aed')
+        topGradient.addColorStop(0, '#8B7ED8')
+        topGradient.addColorStop(1, '#B8A9E8')
       } else if (type === 'finish') {
         topGradient.addColorStop(0, '#fbbf24')
         topGradient.addColorStop(1, '#f59e0b')
@@ -379,7 +379,7 @@ export default function IsometricCanvas({ mapData, robotHistory }: Props) {
       }
 
       // Stroke with neon effect
-      ctx.strokeStyle = type === 'wall' ? '#b794f6' : 'rgba(183, 148, 246, 0.4)'
+      ctx.strokeStyle = type === 'wall' ? '#8B7ED8' : 'rgba(139, 126, 216, 0.4)'
       ctx.lineWidth = 2
       ctx.stroke()
       ctx.restore()
@@ -428,7 +428,7 @@ export default function IsometricCanvas({ mapData, robotHistory }: Props) {
       ctx.fill()
       
       if (type === 'wall') {
-        ctx.strokeStyle = 'rgba(183, 148, 246, 0.3)'
+        ctx.strokeStyle = 'rgba(139, 126, 216, 0.3)'
         ctx.lineWidth = 1
         ctx.stroke()
       }

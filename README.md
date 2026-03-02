@@ -43,7 +43,7 @@ docker-compose exec backend python scripts/seed_data.py
 
 ---
 
-## Что запускать и в каком порядке
+## Что запускать и в каком порядке  
 
 | Действие | Команда | Когда |
 |----------|---------|--------|
@@ -51,7 +51,7 @@ docker-compose exec backend python scripts/seed_data.py
 | Миграции БД | `docker-compose exec backend alembic upgrade head` | После первого клонирования и после появления новых миграций. |
 | Создать админа | `docker-compose exec backend python scripts/create_admin_simple.py` | Один раз после миграций (или если сбросили БД). |
 | Тестовые данные | `docker-compose exec backend python scripts/seed_data.py` | По желанию: уровни и новости. |
-| Перезапуск после изменений кода | `docker-compose restart backend` или `restart frontend` | Код смонтирован в контейнеры — перезапуска достаточно. |
+| Перезапуск после изменений кода | `docker-compose restart backend` `docker-compose restart frontend` | Код смонтирован в контейнеры — перезапуска достаточно. |
 | Полная пересборка | `docker-compose up -d --build` | Если меняли Dockerfile или зависимости. |
 
 ---

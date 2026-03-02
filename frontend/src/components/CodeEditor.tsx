@@ -1,4 +1,4 @@
-import { EditorState, Extension } from '@codemirror/state'
+import { EditorState } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
 import { defaultKeymap } from '@codemirror/commands'
 import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
@@ -17,7 +17,7 @@ interface Props {
 // Custom Kumir syntax highlighting
 const kumirHighlight = HighlightStyle.define([
   { tag: tags.keyword, color: '#c084fc' },
-  { tag: tags.comment, color: 'rgba(183, 148, 246, 0.5)' },
+  { tag: tags.comment, color: 'rgba(139, 126, 216, 0.5)' },
   { tag: tags.number, color: '#fbbf24' },
 ])
 
@@ -50,7 +50,7 @@ export default function CodeEditor({ value, onChange, onExecute, onReset, isExec
           },
           '.cm-gutters': {
             background: 'rgba(12, 10, 22, 0.98)',
-            color: 'rgba(183, 148, 246, 0.5)',
+            color: 'rgba(139, 126, 216, 0.5)',
             border: 'none',
           },
         }),

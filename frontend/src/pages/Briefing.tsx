@@ -14,7 +14,7 @@ export default function Briefing() {
   const navigate = useNavigate()
   const narrativeRef = useRef<HTMLDivElement>(null)
   const [level, setLevel] = useState<Level | null>(null)
-  const [highlights, setHighlights] = useState<any[]>([])
+  const [, setHighlights] = useState<any[]>([])
   const [selectedColor, setSelectedColor] = useState('yellow')
 
   useEffect(() => {

@@ -10,9 +10,9 @@
    - Официальный: https://www.dafont.com/minecraft.font
    - Альтернатива: https://fontmeme.com/fonts/minecraft-font/
 
-2. **Поместите файл `minecraft.ttf` в эту папку**
+2. **Поместите файл шрифта в эту папку** (подойдёт имя `Minecraft.ttf` или `minecraft.ttf`)
    ```
-   frontend/public/fonts/minecraft.ttf
+   frontend/public/fonts/Minecraft.ttf
    ```
 
 3. **Перезапустите dev-сервер**

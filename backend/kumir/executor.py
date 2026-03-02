@@ -48,13 +48,16 @@ class GameMap:
         self.start_pos = None
         self.finish_pos = None
         
-        # Find start and finish positions
+        # Find start and finish positions (case-insensitive for robustness)
         for y in range(height):
             for x in range(width):
-                if cells[y][x] == CellType.START.value:
-                    self.start_pos = (x, y)
-                elif cells[y][x] == CellType.FINISH.value:
-                    self.finish_pos = (x, y)
+                cell = cells[y][x]
+                if isinstance(cell, str):
+                    cell_lower = cell.lower()
+                    if cell_lower == CellType.START.value:
+                        self.start_pos = (x, y)
+                    elif cell_lower == CellType.FINISH.value:
+                        self.finish_pos = (x, y)
     
     def get_cell(self, x: int, y: int) -> Optional[str]:
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -97,8 +100,12 @@ class KumirExecutor:
             lines = self._preprocess(code)
             self._execute_lines(lines)
             
-            # Check if robot reached finish
-            reached_finish = self.game_map.is_finish(self.robot.x, self.robot.y)
+            # Check if robot reached finish (position or current cell type, case-insensitive)
+            cell = self.game_map.get_cell(self.robot.x, self.robot.y)
+            reached_finish = (
+                self.game_map.is_finish(self.robot.x, self.robot.y)
+                or (cell and str(cell).lower() == CellType.FINISH.value)
+            )
             
             return {
                 "success": True,

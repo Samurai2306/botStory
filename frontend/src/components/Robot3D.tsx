@@ -1,6 +1,6 @@
 import { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Environment, Float, MeshDistortMaterial, Sparkles } from '@react-three/drei'
+import { OrbitControls, Environment, Float, Sparkles } from '@react-three/drei'
 import * as THREE from 'three'
 
 function RobotModel() {
@@ -8,7 +8,7 @@ function RobotModel() {
   const headRef = useRef<THREE.Mesh>(null)
   const eyeLeftRef = useRef<THREE.Mesh>(null)
   const eyeRightRef = useRef<THREE.Mesh>(null)
-  const antennaRef = useRef<THREE.Mesh>(null)
+  const antennaRef = useRef<THREE.Group>(null)
 
   // Animation
   useFrame((state) => {
@@ -36,10 +36,10 @@ function RobotModel() {
   // Materials
   const bodyMaterial = useMemo(() => (
     <meshStandardMaterial
-      color="#b794f6"
+      color="#8B7ED8"
       metalness={0.8}
       roughness={0.2}
-      emissive="#b794f6"
+      emissive="#8B7ED8"
       emissiveIntensity={0.5}
     />
   ), [])
@@ -56,8 +56,8 @@ function RobotModel() {
 
   const eyeMaterial = useMemo(() => (
     <meshStandardMaterial
-      color="#7c3aed"
-      emissive="#7c3aed"
+      color="#B8A9E8"
+      emissive="#B8A9E8"
       emissiveIntensity={1.5}
       toneMapped={false}
     />
@@ -72,7 +72,7 @@ function RobotModel() {
           scale={3}
           size={2}
           speed={0.5}
-          color="#b794f6"
+          color="#8B7ED8"
         />
 
         {/* Head */}
@@ -119,8 +119,8 @@ function RobotModel() {
         <mesh position={[0, 0.6, 0.41]}>
           <sphereGeometry args={[0.15, 16, 16]} />
           <meshStandardMaterial
-            color="#7c3aed"
-            emissive="#7c3aed"
+            color="#B8A9E8"
+            emissive="#B8A9E8"
             emissiveIntensity={2}
             toneMapped={false}
           />
@@ -158,7 +158,7 @@ function RobotModel() {
           </mesh>
           <mesh position={[-0.25, -1.1, 0]} castShadow>
             <boxGeometry args={[0.35, 0.3, 0.4]} />
-            <meshStandardMaterial color="#b794f6" metalness={0.9} roughness={0.1} />
+            <meshStandardMaterial color="#8B7ED8" metalness={0.9} roughness={0.1} />
           </mesh>
 
           {/* Right leg */}
@@ -168,7 +168,7 @@ function RobotModel() {
           </mesh>
           <mesh position={[0.25, -1.1, 0]} castShadow>
             <boxGeometry args={[0.35, 0.3, 0.4]} />
-            <meshStandardMaterial color="#b794f6" metalness={0.9} roughness={0.1} />
+            <meshStandardMaterial color="#8B7ED8" metalness={0.9} roughness={0.1} />
           </mesh>
         </group>
 
@@ -176,8 +176,8 @@ function RobotModel() {
         <mesh position={[0, 0.5, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[1.2, 0.02, 16, 100]} />
           <meshStandardMaterial
-            color="#b794f6"
-            emissive="#b794f6"
+            color="#8B7ED8"
+            emissive="#8B7ED8"
             emissiveIntensity={1}
             transparent
             opacity={0.6}
@@ -216,7 +216,7 @@ export default function Robot3D() {
           penumbra={1}
           intensity={2}
           castShadow
-          color="#b794f6"
+          color="#8B7ED8"
         />
         <spotLight
           position={[-5, 5, -5]}
@@ -226,7 +226,7 @@ export default function Robot3D() {
           castShadow
           color="#c084fc"
         />
-        <pointLight position={[0, 1, 3]} intensity={1} color="#7c3aed" />
+        <pointLight position={[0, 1, 3]} intensity={1} color="#B8A9E8" />
         
         {/* Robot */}
         <RobotModel />
@@ -262,10 +262,10 @@ export default function Robot3D() {
         bottom: '10px',
         left: '50%',
         transform: 'translateX(-50%)',
-        color: '#b794f6',
+        color: '#8B7ED8',
         fontFamily: 'Minecraft, Orbitron, monospace',
         fontSize: '0.9rem',
-        textShadow: '0 0 10px rgba(183, 148, 246, 0.8)',
+        textShadow: '0 0 10px rgba(139, 126, 216, 0.8)',
         pointerEvents: 'none',
         textAlign: 'center',
         letterSpacing: '2px'

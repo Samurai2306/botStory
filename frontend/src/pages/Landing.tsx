@@ -3,143 +3,100 @@ import { useAuthStore } from '../store/authStore'
 import { useEffect, useState } from 'react'
 import { newsAPI } from '../services/api'
 import { motion } from 'framer-motion'
-import Robot3D from '../components/Robot3D'
 import './Landing.css'
+
+const MARQUEE_TAGS = [
+  'JavaScript', 'TypeScript', 'Python', 'React', 'Vue', 'Node.js',
+  'C#', 'Java', 'Kotlin', 'Go', 'Rust', 'Django', 'FastAPI',
+  'Angular', 'Svelte', 'PostgreSQL', 'Redis', 'Docker',
+]
 
 export default function Landing() {
   const { isAuthenticated } = useAuthStore()
   const [news, setNews] = useState<any[]>([])
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
     newsAPI.getAll().then(res => setNews(res.data)).catch(() => {})
-    
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY })
-    }
-    
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
   return (
     <div className="landing-container">
-      {/* Animated particles background */}
-      <div className="particles">
-        {[...Array(50)].map((_, i) => (
-          <div key={i} className="particle" style={{
-            left: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 5}s`,
-            animationDuration: `${5 + Math.random() * 10}s`
-          }} />
-        ))}
-      </div>
+      <div className="landing-bg-grid" aria-hidden />
+      <div className="landing-bg-orb landing-bg-orb-1" aria-hidden />
+      <div className="landing-bg-orb landing-bg-orb-2" aria-hidden />
 
-      {/* Floating orbs */}
-      <motion.div 
-        className="floating-orb orb-1"
-        animate={{
-          x: mousePosition.x * 0.02,
-          y: mousePosition.y * 0.02,
-        }}
-        transition={{ type: 'spring', damping: 30 }}
-      />
-      <motion.div 
-        className="floating-orb orb-2"
-        animate={{
-          x: mousePosition.x * -0.015,
-          y: mousePosition.y * -0.015,
-        }}
-        transition={{ type: 'spring', damping: 30 }}
-      />
-      <motion.div 
-        className="floating-orb orb-3"
-        animate={{
-          x: mousePosition.x * 0.01,
-          y: mousePosition.y * 0.01,
-        }}
-        transition={{ type: 'spring', damping: 30 }}
-      />
-
-      {/* Hero section */}
       <section className="hero">
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
           className="hero-content"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
         >
           <motion.div
             className="hero-badge"
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            <span className="badge-text">NEXT-GEN EDUCATION</span>
+            NEXT-GEN EDUCATION
           </motion.div>
 
-          <motion.h1 
-            className="hero-title glitch"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
+          <motion.h1
+            className="hero-title"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
           >
-            LEGEND OF
-            <br />
+            <span className="hero-title-line">LEGEND OF</span>
             <span className="hero-title-accent">B.O.T.</span>
           </motion.h1>
 
-          <motion.p 
+          <motion.p
             className="hero-subtitle"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.35 }}
           >
-            Изучай программирование в киберпространстве будущего
-            <br />
-            Решай задачи. Управляй B.O.T. Становись мастером кода.
+            Изучай программирование в киберпространстве будущего. Решай задачи, управляй B.O.T. и становись мастером кода.
           </motion.p>
 
-          <motion.div 
+          <motion.div
             className="hero-stats"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2 }}
           >
             <div className="stat-item">
-              <div className="stat-value glow-text">∞</div>
+              <div className="stat-value">∞</div>
               <div className="stat-label">Возможностей</div>
             </div>
             <div className="stat-item">
-              <div className="stat-value glow-text">100%</div>
-              <div className="stat-label">Интерактивность</div>
+              <div className="stat-value">100%</div>
+              <div className="stat-label">Результат</div>
             </div>
             <div className="stat-item">
-              <div className="stat-value glow-text">24/7</div>
-              <div className="stat-label">Доступность</div>
+              <div className="stat-value">0+</div>
+              <div className="stat-label">лет</div>
             </div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="hero-buttons"
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.1 }}
+            transition={{ delay: 1.4 }}
           >
             {isAuthenticated ? (
-              <Link to="/levels" className="btn btn-primary">
-                <span className="btn-icon">▶</span>
-                НАЧАТЬ МИССИЮ
+              <Link to="/levels" className="glass-btn glass-btn-primary">
+                ▶ НАЧАТЬ МИССИЮ
               </Link>
             ) : (
               <>
-                <Link to="/register" className="btn btn-primary">
-                  <span className="btn-icon">◉</span>
-                  ИНИЦИАЛИЗАЦИЯ
+                <Link to="/register" className="glass-btn glass-btn-primary">
+                  ◉ НАЧАТЬ ПУТЕШЕСТВИЕ
                 </Link>
-                <Link to="/login" className="btn btn-secondary">
-                  <span className="btn-icon">◈</span>
-                  ВХОД В СИСТЕМУ
+                <Link to="/login" className="glass-btn glass-btn-outline">
+                  ◈ ВХОД В СИСТЕМУ
                 </Link>
               </>
             )}
@@ -149,132 +106,130 @@ export default function Landing() {
             className="scroll-indicator"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.5 }}
+            transition={{ delay: 1.8 }}
           >
-            <div className="scroll-line"></div>
+            <div className="scroll-line" />
             <div className="scroll-text">SCROLL</div>
           </motion.div>
         </motion.div>
 
-        {/* 3D Robot with Three.js */}
-        <motion.div 
+        <motion.div
           className="hero-visual"
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8, duration: 0.8 }}
+          transition={{ delay: 0.6, duration: 0.7 }}
         >
-          <Robot3D />
+          <div className="display-container">
+            <div className="display-screen">
+              <div className="display-header">
+                <div className="display-dots">
+                  <span className="display-dot red" />
+                  <span className="display-dot yellow" />
+                  <span className="display-dot green" />
+                </div>
+                <span className="display-title">Terminal</span>
+              </div>
+              <div className="display-content">
+                <div className="display-line">
+                  <span className="display-prompt">user@botstory:~$</span>
+                  <span className="display-cmd">./welcome.sh</span>
+                </div>
+                <div className="display-line">
+                  <span className="display-output">Legend of B.O.T. — образовательная платформа</span>
+                </div>
+                <div className="display-line">
+                  <span className="display-prompt">user@botstory:~$</span>
+                  <span className="display-cmd">cat mission.txt</span>
+                </div>
+                <div className="display-line">
+                  <span className="display-output">Управляй роботом. Пиши код на Кумире.</span>
+                </div>
+                <div className="display-line">
+                  <span className="display-prompt">user@botstory:~$</span>
+                  <span className="display-cmd">./start_mission</span>
+                </div>
+                <div className="display-line">
+                  <span className="display-output">Готов к миссии.</span>
+                </div>
+                <div className="display-line">
+                  <span className="display-prompt">user@botstory:~$</span>
+                  <span className="display-cursor" />
+                </div>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </section>
 
-      {/* Features section */}
+      <section className="marquee-section">
+        <h2 className="marquee-title">Возможные будущие языки и фреймворки</h2>
+        <div className="marquee-wrap">
+          <div className="marquee-track">
+            {[...MARQUEE_TAGS, ...MARQUEE_TAGS].map((tag, i) => (
+              <span key={i} className="marquee-tag">{tag}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="features" className="features">
         <motion.h2
-          className="section-title glitch"
+          className="section-title"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
         >
-          СИСТЕМНЫЕ ВОЗМОЖНОСТИ
+          СИСТЕМНЫЕ ВОЗМОЖНОСТИ НА ДАННЫЙ МОМЕНТ
         </motion.h2>
-
         <div className="features-grid">
           {[
-            {
-              icon: '⚡',
-              title: 'ИГРОВОЙ ДВИЖОК',
-              desc: 'Решай задачи, управляя B.O.T. на изометрической 3D-карте в реальном времени',
-              color: 'var(--primary)'
-            },
-            {
-              icon: '💻',
-              title: 'ЯЗЫК КУМИР',
-              desc: 'Изучай программирование на понятном русском языке с подсветкой синтаксиса',
-              color: 'var(--secondary)'
-            },
-            {
-              icon: '📊',
-              title: 'УМНЫЙ АНАЛИЗ',
-              desc: 'Получай мгновенную обратную связь и сравнивай своё решение с оптимальным',
-              color: 'var(--accent)'
-            },
-            {
-              icon: '📖',
-              title: 'ЦИФРОВОЙ ДНЕВНИК',
-              desc: 'Сохраняй важные заметки, выделяй ключевые моменты в предысториях',
-              color: 'var(--warning)'
-            },
-            {
-              icon: '💬',
-              title: 'СОЦИАЛЬНАЯ СЕТЬ',
-              desc: 'Обсуждай решения с другими игроками в чатах уровней',
-              color: 'var(--primary)'
-            },
-            {
-              icon: '🎯',
-              title: 'СИСТЕМА ПРОГРЕССА',
-              desc: 'Отслеживай свои достижения, получай статистику и улучшай навыки',
-              color: 'var(--secondary)'
-            },
+            { icon: '⚡', title: 'ИГРОВОЙ ДВИЖОК', desc: 'Решай задачи, управляя B.O.T. на изометрической карте в реальном времени' },
+            { icon: '💻', title: 'ЯЗЫК КУМИР', desc: 'Изучай программирование на понятном русском языке с подсветкой синтаксиса' },
+            { icon: '📊', title: 'УМНЫЙ АНАЛИЗ', desc: 'Получай обратную связь и сравнивай своё решение с оптимальным' },
+            { icon: '📖', title: 'ЦИФРОВОЙ ДНЕВНИК', desc: 'Сохраняй заметки, выделяй ключевые моменты в предысториях' },
+            { icon: '💬', title: 'СОЦИАЛЬНАЯ СЕТЬ', desc: 'Обсуждай решения с другими игроками в чатах уровней' },
+            { icon: '🎯', title: 'СИСТЕМА ПРОГРЕССА', desc: 'Отслеживай достижения, получай статистику и улучшай навыки' },
           ].map((feature, i) => (
             <motion.div
               key={i}
-              className="feature-card glass-card"
-              initial={{ opacity: 0, y: 50 }}
+              className="feature-card"
+              initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              whileHover={{ 
-                scale: 1.05,
-                boxShadow: `0 0 30px ${feature.color}80`
-              }}
+              transition={{ delay: i * 0.08 }}
             >
-              <div className="feature-icon" style={{ 
-                textShadow: `0 0 20px ${feature.color}`
-              }}>
-                {feature.icon}
-              </div>
-              <h3 className="feature-title" style={{ color: feature.color }}>
-                {feature.title}
-              </h3>
+              <div className="feature-icon">{feature.icon}</div>
+              <h3 className="feature-title">{feature.title}</h3>
               <p className="feature-desc">{feature.desc}</p>
-              <div className="feature-line" style={{ background: feature.color }}></div>
+              <div className="feature-line" />
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* News section */}
       {news.length > 0 && (
         <section className="news-section">
           <motion.h2
-            className="section-title glitch"
+            className="section-title"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
             ТРАНСЛЯЦИИ СИСТЕМЫ
           </motion.h2>
-
           <div className="news-grid">
             {news.map((item, i) => (
               <motion.div
                 key={item.id}
-                className="news-card glass-card"
-                initial={{ opacity: 0, x: i % 2 === 0 ? -50 : 50 }}
+                className="news-card"
+                initial={{ opacity: 0, x: i % 2 === 0 ? -30 : 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                whileHover={{ 
-                  y: -10,
-                  boxShadow: '0 0 40px rgba(0, 255, 159, 0.4)'
-                }}
+                transition={{ delay: i * 0.08 }}
               >
                 <div className="news-header">
                   <span className="news-badge">НОВОСТЬ</span>
-                  <span className="news-date">
-                    {new Date(item.created_at).toLocaleDateString('ru-RU')}
-                  </span>
+                  <span className="news-date">{new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
                 </div>
                 <h3 className="news-title">{item.title}</h3>
                 <p className="news-content">
@@ -286,42 +241,35 @@ export default function Landing() {
         </section>
       )}
 
-      {/* CTA section */}
-      <motion.section 
+      <motion.section
         className="cta-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
       >
-        <div className="cta-content glass-card">
-          <h2 className="cta-title glitch">ГОТОВ НАЧАТЬ?</h2>
+        <div className="cta-content">
+          <h2 className="cta-title">ГОТОВ НАЧАТЬ?</h2>
           <p className="cta-text">
-            Присоединяйся к тысячам учеников, которые уже осваивают программирование
-            <br />
-            в самой футуристичной образовательной платформе
+            Присоединяйся к тысячам учеников, которые уже осваивают программирование в самой футуристичной образовательной платформе.
           </p>
           {!isAuthenticated && (
-            <Link to="/register" className="btn btn-primary btn-large">
-              <span className="btn-icon">◉</span>
-              ЗАПУСТИТЬ ИНИЦИАЛИЗАЦИЮ
+            <Link to="/register" className="glass-btn glass-btn-primary">
+              ◉ ОТПРАВИТЬСЯ В ПУТЕШЕСТВИЕ
             </Link>
           )}
         </div>
       </motion.section>
 
-      {/* Footer */}
       <footer className="landing-footer">
         <div className="footer-content">
-          <div className="footer-logo">
-            <span className="glitch">LEGEND OF B.O.T.</span>
-          </div>
+          <div className="footer-logo">LEGEND OF B.O.T.</div>
           <div className="footer-links">
             <a href="#features">О проекте</a>
             <Link to="/levels">К миссиям</Link>
           </div>
           <div className="footer-copy">
-            <p>© 2026 Legend of B.O.T. Все права защищены.</p>
-            <p className="text-secondary">Powered by Future Technologies</p>
+            <p>© 2026 Legend of B.O.T. Все права нарушены.</p>
+            <p>Powered by Sabitoshi</p>
           </div>
         </div>
       </footer>

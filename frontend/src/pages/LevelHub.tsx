@@ -13,11 +13,20 @@ interface Level {
   is_active: boolean
 }
 
+/** Секции миссий по языкам: только Кумир пока с реальными уровнями */
+const LANGUAGE_SECTIONS = [
+  { id: 'kumir', name: 'Кумир', short: 'Кумир', available: true, icon: '◇' },
+  { id: 'python', name: 'Python', short: 'Python', available: false, icon: '🐍' },
+  { id: 'javascript', name: 'JavaScript', short: 'JS', available: false, icon: '◉' },
+  { id: 'cpp', name: 'C++', short: 'C++', available: false, icon: '◈' },
+] as const
+
 export default function LevelHub() {
   const [levels, setLevels] = useState<Level[]>([])
   const [progressMap, setProgressMap] = useState<Record<number, boolean>>({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'completed' | 'active'>('all')
+  const [activeSection, setActiveSection] = useState<string>(LANGUAGE_SECTIONS[0].id)
 
   useEffect(() => {
     Promise.all([levelAPI.getAll(), userAPI.getLevelProgress()])
@@ -52,6 +61,9 @@ export default function LevelHub() {
     )
   }
 
+  const currentSection = LANGUAGE_SECTIONS.find(s => s.id === activeSection) ?? LANGUAGE_SECTIONS[0]
+  const isKumir = activeSection === 'kumir'
+
   return (
     <div className="level-hub">
       <motion.h1
@@ -63,7 +75,27 @@ export default function LevelHub() {
         ВЫБОР МИССИИ
       </motion.h1>
 
-      {levels.length > 0 && (
+      <motion.div
+        className="language-sections"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        {LANGUAGE_SECTIONS.map((section) => (
+          <button
+            key={section.id}
+            type="button"
+            className={`section-tab ${activeSection === section.id ? 'active' : ''} ${!section.available ? 'coming-soon' : ''}`}
+            onClick={() => setActiveSection(section.id)}
+          >
+            <span className="section-tab-icon">{section.icon}</span>
+            <span className="section-tab-name">{section.name}</span>
+            {!section.available && <span className="section-tab-badge">скоро</span>}
+          </button>
+        ))}
+      </motion.div>
+
+      {isKumir && levels.length > 0 && (
         <motion.div 
           className="level-controls"
           initial={{ opacity: 0, y: 20 }}
@@ -95,7 +127,24 @@ export default function LevelHub() {
           </div>
         </motion.div>
       )}
+
+      {!isKumir && (
+        <motion.div
+          className="section-coming-soon"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="coming-soon-icon">{currentSection.icon}</div>
+          <h2 className="coming-soon-title">Миссии по {currentSection.name}</h2>
+          <p className="coming-soon-text">
+            Раздел в разработке. Скоро здесь появятся задания и уровни для {currentSection.name}.
+          </p>
+          <p className="coming-soon-hint">Пока доступны миссии по Кумиру — переключитесь на вкладку «Кумир».</p>
+        </motion.div>
+      )}
       
+      {isKumir && (
       <div className="levels-grid">
         {filteredLevels.map((level, i) => (
           <motion.div
@@ -152,13 +201,16 @@ export default function LevelHub() {
               <p>{level.description}</p>
               
               <div className="level-difficulty">
-                <span>СЛОЖНОСТЬ:</span>
-                <div className="difficulty-stars">
-                  {[...Array(5)].map((_, j) => (
-                    <span key={j} style={{ opacity: j < level.difficulty ? 1 : 0.3 }}>
-                      ⭐
-                    </span>
-                  ))}
+                <span className="level-difficulty-label">СЛОЖНОСТЬ:</span>
+                <div className="difficulty-stars" aria-label={`Сложность: ${Math.min(5, Math.max(1, Number(level.difficulty) || 1))} из 5`}>
+                  {[...Array(5)].map((_, j) => {
+                    const filled = j < Math.min(5, Math.max(1, Number(level.difficulty) || 1))
+                    return (
+                      <span key={j} className={filled ? 'star-filled' : 'star-empty'}>
+                        {filled ? '⭐' : '☆'}
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
               
@@ -175,8 +227,9 @@ export default function LevelHub() {
           </motion.div>
         ))}
       </div>
-      
-      {filteredLevels.length === 0 && (
+      )}
+
+      {isKumir && filteredLevels.length === 0 && (
         <motion.div 
           className="no-levels"
           initial={{ opacity: 0, scale: 0.8 }}
@@ -205,3 +258,4 @@ export default function LevelHub() {
     </div>
   )
 }
+

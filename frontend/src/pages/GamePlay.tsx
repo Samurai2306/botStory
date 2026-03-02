@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { levelAPI, executeAPI } from '../services/api'
 import IsometricCanvas from '../components/IsometricCanvas'
@@ -7,6 +7,8 @@ import Diary from '../components/Diary'
 import LevelChat from '../components/LevelChat'
 import Debriefing from '../components/Debriefing'
 import './GamePlay.css'
+
+const BODY_FULLSCREEN_CLASS = 'gameplay-fullscreen'
 
 interface Level {
   id: number
@@ -25,6 +27,21 @@ export default function GamePlay() {
   const [executionResult, setExecutionResult] = useState<any>(null)
   const [showDebriefing, setShowDebriefing] = useState(false)
   const [sidebarTab, setSidebarTab] = useState<'diary' | 'chat'>('diary')
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => {
+      const next = !prev
+      if (next) document.body.classList.add(BODY_FULLSCREEN_CLASS)
+      else document.body.classList.remove(BODY_FULLSCREEN_CLASS)
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    return () => document.body.classList.remove(BODY_FULLSCREEN_CLASS)
+  }, [])
 
   useEffect(() => {
     if (id) {
@@ -45,14 +62,14 @@ export default function GamePlay() {
       const result = response.data
       
       setExecutionResult(result)
-      setRobotHistory(result.history)
+      setRobotHistory(result.history ?? [])
       
       if (result.success && result.reached_finish) {
-        // Submit solution
-        await levelAPI.submitSolution(level.id, {
+        // Save progress (don't block debriefing on failure)
+        levelAPI.submitSolution(level.id, {
           user_code: code,
-          steps_count: result.steps_count
-        })
+          steps_count: result.steps_count ?? 0
+        }).catch(() => {})
         
         // Show debriefing after animation
         setTimeout(() => setShowDebriefing(true), 2000)
@@ -100,15 +117,33 @@ export default function GamePlay() {
   }
 
   return (
-    <div className="gameplay">
+    <div className={`gameplay ${isFullscreen ? 'gameplay--fullscreen' : ''}`}>
       <div className="gameplay-header">
         <h2>{level.title}</h2>
-        <button onClick={() => navigate('/levels')} className="back-btn">
-          ← Вернуться к уровням
-        </button>
+        <div className="gameplay-header-actions">
+          <button
+            type="button"
+            className="fullscreen-btn"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? 'Выйти из полноэкранного режима' : 'Карта и код во весь экран'}
+          >
+            {isFullscreen ? '✕ Выйти' : '⛶ Во весь экран'}
+          </button>
+          <button
+            type="button"
+            className="sidebar-toggle-btn"
+            onClick={() => setSidebarCollapsed(c => !c)}
+            title={sidebarCollapsed ? 'Показать дневник и чат' : 'Свернуть панель'}
+          >
+            {sidebarCollapsed ? '◐ Панель' : '◑ Свернуть'}
+          </button>
+          <button onClick={() => navigate('/levels')} className="back-btn">
+            ← К уровням
+          </button>
+        </div>
       </div>
       
-      <div className="gameplay-layout">
+      <div className={`gameplay-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <div className="game-area">
           <div className="game-area-section">
             <span className="game-area-label">Карта</span>
@@ -120,36 +155,37 @@ export default function GamePlay() {
           <div className="game-area-section">
             <span className="game-area-label">Код</span>
             <CodeEditor
-            value={code}
-            onChange={setCode}
-            onExecute={handleExecute}
-            onReset={handleReset}
-            isExecuting={isExecuting}
-          />
+              value={code}
+              onChange={setCode}
+              onExecute={handleExecute}
+              onReset={handleReset}
+              isExecuting={isExecuting}
+            />
           </div>
         </div>
         
-        <div className="sidebar">
-          <div className="sidebar-tabs">
-            <button 
-              className={sidebarTab === 'diary' ? 'active' : ''}
-              onClick={() => setSidebarTab('diary')}
-            >
-              📖 Дневник
-            </button>
-            <button 
-              className={sidebarTab === 'chat' ? 'active' : ''}
-              onClick={() => setSidebarTab('chat')}
-            >
-              💬 Чат
-            </button>
+        {!sidebarCollapsed && (
+          <div className="sidebar">
+            <div className="sidebar-tabs">
+              <button 
+                className={sidebarTab === 'diary' ? 'active' : ''}
+                onClick={() => setSidebarTab('diary')}
+              >
+                📖 Дневник
+              </button>
+              <button 
+                className={sidebarTab === 'chat' ? 'active' : ''}
+                onClick={() => setSidebarTab('chat')}
+              >
+                💬 Чат
+              </button>
+            </div>
+            <div className="sidebar-content">
+              {sidebarTab === 'diary' && <Diary levelId={level.id} />}
+              {sidebarTab === 'chat' && <LevelChat levelId={level.id} />}
+            </div>
           </div>
-          
-          <div className="sidebar-content">
-            {sidebarTab === 'diary' && <Diary levelId={level.id} />}
-            {sidebarTab === 'chat' && <LevelChat levelId={level.id} />}
-          </div>
-        </div>
+        )}
       </div>
       
       {executionResult && !executionResult.success && (

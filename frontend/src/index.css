@@ -1,49 +1,47 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @font-face {
   font-family: 'Minecraft';
-  src: url('/fonts/minecraft.ttf') format('truetype');
+  src: url('/fonts/Minecraft.ttf') format('truetype'),
+       url('/fonts/minecraft.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
 :root {
-  /* Lavender/Purple & Peach/Orange color palette */
-  --primary: #b794f6;
-  --primary-glow: rgba(183, 148, 246, 0.5);
-  --secondary: #7c3aed;
-  --accent: #ff9966; /* Peach/Orange for contrast */
-  --accent-glow: rgba(255, 153, 102, 0.5);
-  --tertiary: #c084fc;
+  /* Единая палитра как на лендинге (фиолетовая) */
+  --primary: #8B7ED8;
+  --primary-glow: rgba(139, 126, 216, 0.5);
+  --secondary: #6B5B9A;
+  --accent: #B8A9E8;
+  --accent-glow: rgba(184, 169, 232, 0.5);
+  --tertiary: #9B8BC8;
   --warning: #fbbf24;
   --danger: #f87171;
   
-  /* Dark theme */
   --bg-dark: #0a0a0f;
   --bg-darker: #050508;
-  --bg-card: rgba(20, 15, 30, 0.8);
-  --bg-glass: rgba(183, 148, 246, 0.05);
+  --bg-card: rgba(20, 15, 35, 0.8);
+  --bg-glass: rgba(139, 126, 216, 0.08);
+  --border-glass: rgba(184, 169, 232, 0.25);
   
-  /* Text */
   --text-primary: #f5f3ff;
-  --text-secondary: #c4b5fd;
-  --text-glow: #b794f6;
+  --text-secondary: #d4c7f0;
+  --text-glow: #B8A9E8;
   
-  /* Borders */
   --border-neon: 2px solid var(--primary);
-  --border-glow: 0 0 10px var(--primary-glow), 0 0 20px var(--accent-glow);
+  --border-glow: 0 0 10px var(--primary-glow);
+  --shadow-lg: 0 20px 60px rgba(139, 126, 216, 0.25);
+  --shadow-neon: 0 0 20px var(--primary-glow);
+  --radius: 24px;
+  --blur: blur(20px);
   
-  /* Shadows */
-  --shadow-lg: 0 20px 60px rgba(124, 58, 237, 0.3);
-  --shadow-neon: 0 0 20px var(--primary-glow), inset 0 0 20px var(--accent-glow);
-  
-  font-family: 'Minecraft', 'Rajdhani', 'Orbitron', sans-serif;
+  font-family: 'Minecraft', 'Orbitron', monospace;
   line-height: 1.6;
   font-weight: 400;
   color: var(--text-primary);
   background: var(--bg-dark);
-  
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -60,13 +58,10 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: 
-    radial-gradient(ellipse at top left, rgba(183, 148, 246, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at bottom right, rgba(255, 153, 102, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at center, rgba(124, 58, 237, 0.1) 0%, transparent 70%),
-    linear-gradient(180deg, #0a0a0f 0%, #050508 100%);
+  background: linear-gradient(135deg, #0f0f15 0%, #1a1a2a 50%, #2a1f3a 100%);
   background-attachment: fixed;
   overflow-x: hidden;
+  font-family: 'Minecraft', 'Orbitron', monospace;
 }
 
 #root {
@@ -75,7 +70,33 @@ body {
   position: relative;
 }
 
-/* Animated background grid */
+/* Session check loading (full-screen) */
+.app-session-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 1rem;
+  color: var(--text-secondary);
+}
+.app-session-loading p {
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+}
+.app-session-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--bg-glass);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: app-spin 0.8s linear infinite;
+}
+@keyframes app-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Фоновая сетка (как на лендинге) */
 body::before {
   content: '';
   position: fixed;
@@ -83,18 +104,12 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: 
-    linear-gradient(rgba(183, 148, 246, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(183, 148, 246, 0.03) 1px, transparent 1px);
-  background-size: 50px 50px;
-  animation: gridScroll 20s linear infinite;
+  background-image:
+    linear-gradient(rgba(184, 169, 232, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(184, 169, 232, 0.12) 1px, transparent 1px);
+  background-size: 40px 40px;
   pointer-events: none;
   z-index: 0;
-}
-
-@keyframes gridScroll {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(50px); }
 }
 
 /* Glitch effect for headers */
@@ -156,11 +171,8 @@ button:hover::before, .btn:hover::before {
 
 button:hover, .btn:hover {
   background: var(--primary);
-  color: var(--bg-dark);
-  box-shadow: 
-    0 0 20px var(--primary-glow),
-    0 0 40px var(--primary-glow),
-    inset 0 0 20px rgba(0, 255, 159, 0.5);
+  color: #fff;
+  box-shadow: 0 0 25px var(--primary-glow);
   transform: translateY(-2px);
 }
 
@@ -174,28 +186,15 @@ button:disabled {
   box-shadow: none;
 }
 
-/* Glass card effect */
+/* Glass card (как на лендинге) */
 .glass-card {
-  background: rgba(15, 15, 25, 0.6);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 255, 159, 0.2);
-  border-radius: 16px;
-  box-shadow: 
-    0 8px 32px 0 rgba(0, 0, 0, 0.37),
-    inset 0 0 20px rgba(0, 255, 159, 0.05);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(139, 126, 216, 0.12);
   position: relative;
   overflow: hidden;
-}
-
-.glass-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--primary), transparent);
-  animation: scanline 3s linear infinite;
 }
 
 @keyframes scanline {
@@ -203,23 +202,22 @@ button:disabled {
   100% { left: 100%; }
 }
 
-/* Input fields */
+/* Input fields (в стиле лендинга) */
 input, textarea, select {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 1.1em;
+  font-family: 'Inter', 'Rajdhani', sans-serif;
+  font-size: 1rem;
   padding: 12px 16px;
-  border: 2px solid rgba(0, 255, 159, 0.3);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
-  transition: all 0.3s ease;
+  transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
 }
 
 input:focus, textarea:focus, select:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 20px var(--primary-glow);
-  background: rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 0 3px rgba(139, 126, 216, 0.2);
 }
 
 input::placeholder, textarea::placeholder {
@@ -235,7 +233,7 @@ input::placeholder, textarea::placeholder {
 
 ::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(0, 255, 159, 0.1);
+  border: 1px solid var(--border-glass);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -316,7 +314,7 @@ input::placeholder, textarea::placeholder {
 .spinner {
   width: 50px;
   height: 50px;
-  border: 3px solid rgba(0, 255, 159, 0.1);
+  border: 3px solid var(--bg-glass);
   border-top: 3px solid var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -332,11 +330,9 @@ input::placeholder, textarea::placeholder {
 .holographic {
   background: linear-gradient(
     135deg,
-    rgba(0, 255, 159, 0.2) 0%,
-    rgba(0, 217, 255, 0.2) 25%,
-    rgba(255, 0, 255, 0.2) 50%,
-    rgba(0, 217, 255, 0.2) 75%,
-    rgba(0, 255, 159, 0.2) 100%
+    rgba(139, 126, 216, 0.15) 0%,
+    rgba(184, 169, 232, 0.15) 50%,
+    rgba(139, 126, 216, 0.15) 100%
   );
   background-size: 200% 200%;
   animation: holographic 3s ease infinite;
@@ -467,15 +463,15 @@ input::placeholder, textarea::placeholder {
 
 /* Card with quality styling */
 .premium-card {
-  background: linear-gradient(135deg, rgba(183, 148, 246, 0.1), rgba(255, 153, 102, 0.05));
+  background: linear-gradient(135deg, rgba(139, 126, 216, 0.1), rgba(184, 169, 232, 0.05));
   backdrop-filter: blur(20px);
-  border: 2px solid rgba(183, 148, 246, 0.3);
+  border: 2px solid rgba(139, 126, 216, 0.3);
   border-radius: 16px;
   padding: 2rem;
   box-shadow: 
     0 10px 40px rgba(0, 0, 0, 0.5),
-    0 0 30px rgba(183, 148, 246, 0.2),
-    inset 0 0 20px rgba(255, 153, 102, 0.05);
+    0 0 30px rgba(139, 126, 216, 0.2),
+    inset 0 0 20px rgba(184, 169, 232, 0.05);
   position: relative;
   overflow: hidden;
 }

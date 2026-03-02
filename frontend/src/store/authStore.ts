@@ -27,6 +27,7 @@ interface AuthState {
   token: string | null
   isAuthenticated: boolean
   isLoading: boolean
+  sessionChecked: boolean
   error: string | null
   
   login: (email: string, password: string) => Promise<void>
@@ -41,6 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: localStorage.getItem('token'),
   isAuthenticated: !!localStorage.getItem('token'),
   isLoading: false,
+  sessionChecked: !localStorage.getItem('token'),
   error: null,
   
   login: async (email: string, password: string) => {
@@ -79,20 +81,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   
   logout: () => {
     localStorage.removeItem('token')
-    set({ user: null, token: null, isAuthenticated: false })
+    set({ user: null, token: null, isAuthenticated: false, sessionChecked: true })
   },
   
   fetchUser: async () => {
-    if (!localStorage.getItem('token')) return
-    
+    if (!localStorage.getItem('token')) {
+      set({ sessionChecked: true })
+      return
+    }
     set({ isLoading: true })
     try {
       const response = await userAPI.getProfile()
-      set({ user: response.data, isLoading: false })
+      set({ user: response.data, isLoading: false, sessionChecked: true })
     } catch (error) {
-      // Token invalid, logout
       useAuthStore.getState().logout()
-      set({ isLoading: false })
+      set({ isLoading: false, sessionChecked: true })
     }
   },
   

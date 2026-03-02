@@ -5,17 +5,19 @@
 }
 
 .profile-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
   padding: 3rem;
   text-align: center;
+  box-shadow: 0 6px 24px rgba(139, 126, 216, 0.12);
 }
 
 .profile-avatar {
   width: 120px;
   height: 120px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8B7ED8 0%, #B8A9E8 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -24,28 +26,31 @@
   font-weight: bold;
   color: white;
   margin: 0 auto 1.5rem;
+  box-shadow: 0 0 30px rgba(139, 126, 216, 0.3);
 }
 
 .profile h1 {
   font-size: 2rem;
   margin-bottom: 0.5rem;
+  color: var(--text-primary);
 }
 
 .profile-email {
-  color: #888;
+  color: var(--text-secondary);
   margin-bottom: 1rem;
 }
 
 .profile-role {
   display: inline-block;
   padding: 0.5rem 1rem;
-  background: rgba(100, 108, 255, 0.2);
-  border-radius: 20px;
+  background: rgba(139, 126, 216, 0.2);
+  border: 1px solid var(--border-glass);
+  border-radius: 999px;
   margin-bottom: 2rem;
 }
 
 .profile-role span {
-  color: #646cff;
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -55,29 +60,30 @@
   gap: 2rem;
   margin: 2rem 0;
   padding: 2rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
 }
 
-.stat-item {
+.profile .stat-item {
   text-align: center;
 }
 
-.stat-value {
+.profile .stat-value {
   font-size: 2.5rem;
   font-weight: bold;
-  color: #646cff;
+  color: var(--accent);
   margin-bottom: 0.5rem;
 }
 
-.stat-label {
+.profile .stat-label {
   font-size: 0.875rem;
-  color: #888;
+  color: var(--text-secondary);
 }
 
 .profile-info {
-  color: #888;
+  color: var(--text-secondary);
   margin-top: 2rem;
   padding-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border-glass);
 }
