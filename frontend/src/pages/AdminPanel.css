@@ -10,6 +10,41 @@
   content: none !important;
 }
 
+/* Вкладки: Конструктор уровней / Новости */
+.admin-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-glass);
+  padding-bottom: 0.5rem;
+}
+
+.admin-tab {
+  padding: 0.75rem 1.5rem;
+  font-family: 'Minecraft', 'Orbitron', monospace;
+  font-weight: 600;
+  letter-spacing: 2px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.admin-tab:hover {
+  color: var(--accent);
+  background: rgba(139, 126, 216, 0.1);
+}
+
+.admin-tab.active {
+  color: var(--primary);
+  background: rgba(139, 126, 216, 0.15);
+  border-color: var(--border-glass);
+  box-shadow: 0 0 15px rgba(139, 126, 216, 0.2);
+}
+
 .admin-panel h1 {
   font-size: 2.2rem;
   margin-bottom: 1.5rem;
@@ -278,6 +313,48 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
+}
+
+/* ——— Новости ——— */
+.admin-news-form .form-section {
+  max-width: 100%;
+}
+
+.admin-news-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-news-actions .submit-btn {
+  flex-shrink: 0;
+}
+
+.admin-delete-btn {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  color: #fca5a5 !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2) !important;
+}
+
+.admin-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: #f87171 !important;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.35) !important;
+}
+
+.news-checkbox-label {
+  display: flex !important;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.news-checkbox-label input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: var(--primary);
 }
 
 /* ——— Карта уровня ——— */

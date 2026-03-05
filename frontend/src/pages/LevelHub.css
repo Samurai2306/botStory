@@ -233,8 +233,31 @@
   height: 80px;
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   border: 2px solid var(--primary);
-  opacity: 0.8;
+  opacity: 0.9;
   box-shadow: 0 0 30px var(--primary-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: visible;
+}
+
+.iso-face-icon {
+  font-family: 'Minecraft', 'Orbitron', monospace;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 12px currentColor, 2px 2px 0 rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.iso-face-icon.completed {
+  color: #22c55e;
+  text-shadow: 0 0 15px #22c55e, 0 0 25px rgba(34, 197, 94, 0.6), 2px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.iso-face-icon.active {
+  color: #ef4444;
+  text-shadow: 0 0 15px #ef4444, 0 0 25px rgba(239, 68, 68, 0.5), 2px 2px 0 rgba(0, 0, 0, 0.5);
 }
 
 .iso-face.front {
@@ -394,40 +417,7 @@
   animation: pulse 2s infinite;
 }
 
-/* Status indicators */
-.level-status {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  z-index: 3;
-  box-shadow: 0 0 20px currentColor;
-  animation: statusPulse 2s ease-in-out infinite;
-}
-
-.level-status.completed {
-  background: rgba(139, 126, 216, 0.2);
-  border: 2px solid var(--primary);
-  color: var(--primary);
-}
-
-.level-status.active,
-.level-status.locked {
-  background: rgba(139, 126, 216, 0.15);
-  border: 2px solid var(--primary);
-  color: var(--primary);
-}
-
-@keyframes statusPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
+/* Индикатор статуса теперь на гранях куба (.iso-face-icon) */
 
 /* No levels state */
 .no-levels {

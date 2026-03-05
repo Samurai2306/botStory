@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -148,40 +149,50 @@ async def submit_level_solution(
     db: Session = Depends(get_db)
 ):
     """Submit a solution for a level"""
-    level = db.query(Level).filter(Level.id == level_id).first()
-    if not level:
+    try:
+        level = db.query(Level).filter(Level.id == level_id).first()
+        if not level:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Level not found"
+            )
+        
+        # Get or create progress
+        progress = db.query(LevelProgress).filter(
+            LevelProgress.level_id == level_id,
+            LevelProgress.user_id == current_user.id
+        ).first()
+        
+        if not progress:
+            progress = LevelProgress(
+                user_id=current_user.id,
+                level_id=level_id,
+                attempts=0,
+                steps_count=progress_data.steps_count,
+                user_code=progress_data.user_code,
+                completed=True,
+                completed_at=datetime.utcnow(),
+                best_steps_count=progress_data.steps_count,
+            )
+            db.add(progress)
+        else:
+            progress.attempts = (progress.attempts or 0) + 1
+            progress.user_code = progress_data.user_code
+            progress.steps_count = progress_data.steps_count
+            progress.completed = True
+            progress.completed_at = datetime.utcnow()
+            if progress.best_steps_count is None or progress_data.steps_count < progress.best_steps_count:
+                progress.best_steps_count = progress_data.steps_count
+        
+        db.commit()
+        db.refresh(progress)
+        
+        return progress
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Level not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save progress: {str(e)}"
         )
-    
-    # Get or create progress
-    progress = db.query(LevelProgress).filter(
-        LevelProgress.level_id == level_id,
-        LevelProgress.user_id == current_user.id
-    ).first()
-    
-    if not progress:
-        progress = LevelProgress(
-            user_id=current_user.id,
-            level_id=level_id
-        )
-        db.add(progress)
-    
-    # Update progress
-    progress.attempts += 1
-    progress.user_code = progress_data.user_code
-    progress.steps_count = progress_data.steps_count
-    progress.completed = True
-    
-    from datetime import datetime
-    progress.completed_at = datetime.utcnow()
-    
-    # Update best result
-    if progress.best_steps_count is None or progress_data.steps_count < progress.best_steps_count:
-        progress.best_steps_count = progress_data.steps_count
-    
-    db.commit()
-    db.refresh(progress)
-    
-    return progress

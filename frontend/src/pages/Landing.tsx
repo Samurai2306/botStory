@@ -232,9 +232,7 @@ export default function Landing() {
                   <span className="news-date">{new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
                 </div>
                 <h3 className="news-title">{item.title}</h3>
-                <p className="news-content">
-                  {item.content.length > 200 ? `${item.content.substring(0, 200)}...` : item.content}
-                </p>
+                <p className="news-content">{item.content}</p>
               </motion.div>
             ))}
           </div>
@@ -269,7 +267,7 @@ export default function Landing() {
           </div>
           <div className="footer-copy">
             <p>© 2026 Legend of B.O.T. Все права нарушены.</p>
-            <p>Powered by Sabitoshi</p>
+            <p>Powered by Sabitoshi & Dabjam</p>
           </div>
         </div>
       </footer>

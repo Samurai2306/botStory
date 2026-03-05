@@ -163,28 +163,22 @@ export default function LevelHub() {
               transition: { duration: 0.2 }
             }}
           >
-            {/* Isometric 3D Preview */}
+            {/* Isometric 3D Preview: индикатор на гранях куба (галочка/крестик) */}
             <div className="level-card-header">
               <div className="level-isometric-preview">
                 <div className="iso-cube">
-                  <div className="iso-face front"></div>
-                  <div className="iso-face back"></div>
-                  <div className="iso-face top"></div>
-                  <div className="iso-face bottom"></div>
-                  <div className="iso-face left"></div>
-                  <div className="iso-face right"></div>
+                  {['front', 'back', 'top', 'bottom', 'left', 'right'].map((face) => (
+                    <div key={face} className={`iso-face ${face}`}>
+                      <span
+                        className={`iso-face-icon ${progressMap[level.id] ? 'completed' : 'active'}`}
+                        aria-hidden
+                      >
+                        {progressMap[level.id] ? '✓' : '✗'}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
-              
-              {/* Status indicator: пройден или доступен */}
-              <motion.div 
-                className={`level-status ${progressMap[level.id] ? 'completed' : 'active'}`}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2 * i, type: "spring" }}
-              >
-                {progressMap[level.id] ? '✓' : '▶'}
-              </motion.div>
             </div>
 
             <div className="level-card-body">

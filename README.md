@@ -100,6 +100,12 @@ docker-compose ps
 - Проверьте, что backend отвечает: `curl http://localhost:8000/health`
 - В dev Vite проксирует `/api` на backend; проверьте `frontend/vite.config.ts` (proxy target).
 
+### Прогресс не сохраняется / «Network Error» при завершении уровня
+
+- Убедитесь, что **бэкенд запущен** и доступен: в браузере или в терминале выполните `curl http://localhost:8000/health` — должен вернуться `{"status":"healthy"}`.
+- Если фронт открыт на `localhost:5173`, запросы сохранения идут на `http://localhost:8000` (или на значение `VITE_API_URL` в `.env` фронта). Запустите все сервисы: `docker-compose up -d` или отдельно backend на порту 8000.
+- В логах backend при сохранении не должно быть исключений: `docker-compose logs -f backend` (завершите уровень и посмотрите вывод).
+
 ### Пустой список уровней / 401 в консоли
 
 - Выполнен ли вход; не истёк ли JWT.

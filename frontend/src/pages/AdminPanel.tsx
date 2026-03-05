@@ -1,11 +1,22 @@
 import { useState, useCallback, useEffect } from 'react'
-import { levelAPI } from '../services/api'
+import { levelAPI, newsAPI } from '../services/api'
 import './AdminPanel.css'
+
+type AdminSection = 'levels' | 'news'
 
 interface LevelOption {
   id: number
   title: string
   order: number
+}
+
+interface NewsItem {
+  id: number
+  title: string
+  content: string
+  is_published: boolean
+  created_at: string
+  updated_at: string
 }
 
 const CELL_TYPES = [
@@ -51,16 +62,30 @@ const emptyLevelData = () => ({
   }
 })
 
+const emptyNewsData = () => ({ title: '', content: '', is_published: false })
+
 export default function AdminPanel() {
+  const [adminSection, setAdminSection] = useState<AdminSection>('levels')
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [selectedCellType, setSelectedCellType] = useState<string>('empty')
   const [levels, setLevels] = useState<LevelOption[]>([])
   const [editingLevelId, setEditingLevelId] = useState<number | null>(null)
   const [levelData, setLevelData] = useState(emptyLevelData())
 
+  const [newsList, setNewsList] = useState<NewsItem[]>([])
+  const [editingNewsId, setEditingNewsId] = useState<number | null>(null)
+  const [newsData, setNewsData] = useState(emptyNewsData())
+
   useEffect(() => {
     levelAPI.getAll().then(res => setLevels(res.data || [])).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (adminSection === 'news') {
+      newsAPI.getAll().then(res => setNewsList(res.data || [])).catch(() => {})
+    }
+    setMessage(null)
+  }, [adminSection])
 
   useEffect(() => {
     if (editingLevelId == null) {
@@ -86,6 +111,21 @@ export default function AdminPanel() {
     }).catch(() => setMessage({ type: 'error', text: 'Не удалось загрузить уровень' }))
   }, [editingLevelId])
 
+  useEffect(() => {
+    if (adminSection !== 'news' || editingNewsId == null) {
+      setNewsData(emptyNewsData())
+      return
+    }
+    newsAPI.getById(editingNewsId).then(res => {
+      const n = res.data
+      setNewsData({
+        title: n.title || '',
+        content: n.content || '',
+        is_published: !!n.is_published
+      })
+    }).catch(() => setMessage({ type: 'error', text: 'Не удалось загрузить новость' }))
+  }, [adminSection, editingNewsId])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage(null)
@@ -107,6 +147,41 @@ export default function AdminPanel() {
       const d = error.response?.data?.detail
       const text = Array.isArray(d) ? (d[0]?.msg || d[0] || d.join(', ')) : (d || (editingLevelId != null ? 'Не удалось обновить уровень' : 'Не удалось создать уровень'))
       setMessage({ type: 'error', text: typeof text === 'string' ? text : 'Ошибка' })
+    }
+  }
+
+  const handleNewsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMessage(null)
+    try {
+      if (editingNewsId != null) {
+        await newsAPI.update(editingNewsId, newsData)
+        setMessage({ type: 'success', text: 'Новость обновлена!' })
+      } else {
+        await newsAPI.create(newsData)
+        setMessage({ type: 'success', text: 'Новость создана!' })
+        setNewsData(emptyNewsData())
+      }
+      newsAPI.getAll().then(res => setNewsList(res.data || []))
+    } catch (err: any) {
+      const d = err.response?.data?.detail
+      const text = Array.isArray(d) ? (d[0]?.msg || d[0] || d.join(', ')) : (d || 'Ошибка сохранения новости')
+      setMessage({ type: 'error', text: typeof text === 'string' ? text : 'Ошибка' })
+    }
+  }
+
+  const handleNewsDelete = async () => {
+    if (editingNewsId == null) return
+    if (!window.confirm('Удалить эту новость?')) return
+    setMessage(null)
+    try {
+      await newsAPI.delete(editingNewsId)
+      setMessage({ type: 'success', text: 'Новость удалена' })
+      setEditingNewsId(null)
+      setNewsData(emptyNewsData())
+      newsAPI.getAll().then(res => setNewsList(res.data || []))
+    } catch {
+      setMessage({ type: 'error', text: 'Не удалось удалить новость' })
     }
   }
 
@@ -196,13 +271,32 @@ export default function AdminPanel() {
 
   return (
     <div className="admin-panel">
-      <h1>Конструктор уровней</h1>
-      {message && (
-        <div className={`admin-message ${message.type}`}>
-          {message.type === 'success' ? '✓' : '⚠'} {message.text}
-        </div>
-      )}
-      <form onSubmit={handleSubmit} className="level-form">
+      <div className="admin-tabs">
+        <button
+          type="button"
+          className={`admin-tab ${adminSection === 'levels' ? 'active' : ''}`}
+          onClick={() => setAdminSection('levels')}
+        >
+          Конструктор уровней
+        </button>
+        <button
+          type="button"
+          className={`admin-tab ${adminSection === 'news' ? 'active' : ''}`}
+          onClick={() => setAdminSection('news')}
+        >
+          Новости
+        </button>
+      </div>
+
+      {adminSection === 'levels' && (
+        <>
+          <h1>Конструктор уровней</h1>
+          {message && (
+            <div className={`admin-message ${message.type}`}>
+              {message.type === 'success' ? '✓' : '⚠'} {message.text}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="level-form">
         <div className="form-section">
           <h2>Режим</h2>
           <div className="form-group">
@@ -487,9 +581,92 @@ export default function AdminPanel() {
         </div>
         
         <button type="submit" className="submit-btn">
-          {editingLevelId != null ? 'Сохранить изменения' : 'Создать уровень'}
-        </button>
-      </form>
+            {editingLevelId != null ? 'Сохранить изменения' : 'Создать уровень'}
+          </button>
+        </form>
+        </>
+      )}
+
+      {adminSection === 'news' && (
+        <>
+          <h1>Новости</h1>
+          {message && (
+            <div className={`admin-message ${message.type}`}>
+              {message.type === 'success' ? '✓' : '⚠'} {message.text}
+            </div>
+          )}
+          <form onSubmit={handleNewsSubmit} className="level-form admin-news-form">
+            <div className="form-section">
+              <h2>Режим</h2>
+              <div className="form-group">
+                <label>Новость</label>
+                <div className="level-select-wrap">
+                  <select
+                    value={editingNewsId ?? ''}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setEditingNewsId(v === '' ? null : parseInt(v, 10))
+                    }}
+                    className="level-select-edit"
+                    aria-label="Выберите новость для редактирования"
+                  >
+                    <option value="">— Новая новость —</option>
+                    {newsList.map(n => (
+                      <option key={n.id} value={n.id}>
+                        {n.is_published ? '✓' : '○'} {n.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <span className="form-hint">
+                  {editingNewsId != null ? 'Редактирование: измените поля и нажмите «Сохранить»' : 'Выберите новость или оставьте «Новая новость» для создания'}
+                </span>
+              </div>
+            </div>
+            <div className="form-section">
+              <h2>Содержание</h2>
+              <div className="form-group">
+                <label>Заголовок</label>
+                <input
+                  type="text"
+                  value={newsData.title}
+                  onChange={(e) => setNewsData({ ...newsData, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Текст</label>
+                <textarea
+                  value={newsData.content}
+                  onChange={(e) => setNewsData({ ...newsData, content: e.target.value })}
+                  rows={8}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="news-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={newsData.is_published}
+                    onChange={(e) => setNewsData({ ...newsData, is_published: e.target.checked })}
+                  />
+                  <span>Опубликовано (видна на лендинге)</span>
+                </label>
+              </div>
+            </div>
+            <div className="admin-news-actions">
+              <button type="submit" className="submit-btn">
+                {editingNewsId != null ? 'Сохранить изменения' : 'Создать новость'}
+              </button>
+              {editingNewsId != null && (
+                <button type="button" className="submit-btn admin-delete-btn" onClick={handleNewsDelete}>
+                  Удалить новость
+                </button>
+              )}
+            </div>
+          </form>
+        </>
+      )}
     </div>
   )
 }

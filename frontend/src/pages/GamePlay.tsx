@@ -26,6 +26,7 @@ export default function GamePlay() {
   const [isExecuting, setIsExecuting] = useState(false)
   const [executionResult, setExecutionResult] = useState<any>(null)
   const [showDebriefing, setShowDebriefing] = useState(false)
+  const [progressSaveError, setProgressSaveError] = useState<string | null>(null)
   const [sidebarTab, setSidebarTab] = useState<'diary' | 'chat'>('diary')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -65,13 +66,36 @@ export default function GamePlay() {
       setRobotHistory(result.history ?? [])
       
       if (result.success && result.reached_finish) {
-        // Save progress (don't block debriefing on failure)
-        levelAPI.submitSolution(level.id, {
-          user_code: code,
-          steps_count: result.steps_count ?? 0
-        }).catch(() => {})
-        
-        // Show debriefing after animation
+        setProgressSaveError(null)
+        const stepsCount = typeof result.steps_count === 'number' ? result.steps_count : 0
+        const levelId = Number(level.id)
+        const payload = { user_code: code.trim(), steps_count: stepsCount }
+        let lastErr: any = null
+        const maxAttempts = 3
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            await levelAPI.submitSolution(levelId, payload)
+            lastErr = null
+            break
+          } catch (saveErr: any) {
+            lastErr = saveErr
+            const isNetworkError = !saveErr?.response && (saveErr?.message === 'Network Error' || saveErr?.code === 'ERR_NETWORK')
+            if (isNetworkError && attempt < maxAttempts) {
+              await new Promise(r => setTimeout(r, 800 * attempt))
+              continue
+            }
+            break
+          }
+        }
+        if (lastErr) {
+          const msg = lastErr?.response?.data?.detail ?? lastErr?.message ?? 'Ошибка сети'
+          const text = Array.isArray(msg) ? msg[0]?.msg ?? String(msg) : String(msg)
+          const hint = !lastErr?.response && (lastErr?.message === 'Network Error' || lastErr?.code === 'ERR_NETWORK')
+            ? ' Проверьте, что бэкенд запущен (например: docker-compose up -d или uvicorn на порту 8000).'
+            : ''
+          setProgressSaveError(text + hint)
+          console.error('Не удалось сохранить прогресс:', lastErr?.response?.data ?? lastErr)
+        }
         setTimeout(() => setShowDebriefing(true), 2000)
       }
     } catch (error: any) {
@@ -110,8 +134,9 @@ export default function GamePlay() {
         levelId={level.id}
         result={executionResult}
         goldenSteps={level.golden_steps_count}
+        progressSaveError={progressSaveError}
         onClose={() => navigate('/levels')}
-        onRetry={() => setShowDebriefing(false)}
+        onRetry={() => { setShowDebriefing(false); setProgressSaveError(null) }}
       />
     )
   }

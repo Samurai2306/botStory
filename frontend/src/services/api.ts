@@ -26,12 +26,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      useAuthStore.getState().logout()
-      const currentPath = window.location.pathname
-      const isLoginRequest = !!error.config?.url?.includes('/auth/login')
-
-      if (!isLoginRequest && !PUBLIC_PATHS.has(currentPath)) {
-        window.location.pathname = '/'
+      const isProgressSave = error.config?.method === 'post' && typeof error.config?.url === 'string' && error.config.url.includes('/progress')
+      if (!isProgressSave) {
+        useAuthStore.getState().logout()
+        const currentPath = window.location.pathname
+        const isLoginRequest = !!error.config?.url?.includes('/auth/login')
+        if (!isLoginRequest && !PUBLIC_PATHS.has(currentPath)) {
+          window.location.pathname = '/'
+        }
       }
     }
     return Promise.reject(error)
@@ -63,7 +65,11 @@ export const levelAPI = {
   getById: (id: number) => api.get(`/levels/${id}`),
   getProgress: (id: number) => api.get(`/levels/${id}/progress`),
   submitSolution: (id: number, data: { user_code: string; steps_count: number }) =>
-    api.post(`/levels/${id}/progress`, { level_id: id, ...data }),
+    api.post(`/levels/${Number(id)}/progress`, {
+      level_id: Number(id),
+      user_code: data.user_code,
+      steps_count: Number(data.steps_count)
+    }),
   
   // Admin
   create: (data: any) => api.post('/levels', data),

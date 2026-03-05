@@ -9,6 +9,8 @@ from app.db.models import User, UserRole
 from app.core.security import decode_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+# Для публичных эндпоинтов (новости, список уровней): не возвращать 401 при отсутствии токена
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 async def get_current_user(
@@ -68,7 +70,7 @@ async def get_current_admin(
 
 
 def get_optional_user(
-    token: Optional[str] = Depends(oauth2_scheme),
+    token: Optional[str] = Depends(oauth2_scheme_optional),
     db: Session = Depends(get_db)
 ) -> Optional[User]:
     """Get user if authenticated, otherwise None (for public endpoints)"""

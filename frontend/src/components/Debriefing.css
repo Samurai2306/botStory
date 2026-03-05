@@ -26,6 +26,17 @@
   color: white;
 }
 
+.debriefing-save-error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  color: #fecaca;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
 .result-summary {
   display: flex;
   gap: 2rem;

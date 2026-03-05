@@ -9,11 +9,12 @@ interface Props {
     golden_steps_count?: number
   }
   goldenSteps?: number
+  progressSaveError?: string | null
   onClose: () => void
   onRetry: () => void
 }
 
-export default function Debriefing({ levelId, result, goldenSteps, onClose, onRetry }: Props) {
+export default function Debriefing({ levelId, result, goldenSteps, progressSaveError, onClose, onRetry }: Props) {
   const navigate = useNavigate()
 
   const isOptimal = result.steps_count <= (goldenSteps || result.golden_steps_count || Infinity)
@@ -22,6 +23,11 @@ export default function Debriefing({ levelId, result, goldenSteps, onClose, onRe
     <div className="debriefing">
       <div className="debriefing-card">
         <h1>Миссия завершена!</h1>
+        {progressSaveError && (
+          <div className="debriefing-save-error" role="alert">
+            Не удалось сохранить прогресс: {progressSaveError}. Вернитесь к уровням и зайдите в миссию снова — прохождение сохранится при следующей попытке.
+          </div>
+        )}
         
         <div className="result-summary">
           <div className="result-stat">
