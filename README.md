@@ -133,7 +133,7 @@ botStory/
 │   └── scripts/      # create_admin_simple.py, seed_data.py
 ├── frontend/         # React + TypeScript + Vite
 │   └── src/          # Страницы, компоненты, store, api
-├── docs/             # API_GUIDE, DEPLOYMENT, FEATURES
+├── docs/             # Документация (API, деплой, архитектура, фичи, конкуренты, ПО)
 └── docker-compose.yml
 ```
 
@@ -153,13 +153,12 @@ botStory/
 
 | Документ | Содержание |
 |----------|------------|
-| [QUICKSTART.md](QUICKSTART.md) | Подробный быстрый старт и первые шаги в игре |
-| [FULLTECHINSTRUCTION.md](FULLTECHINSTRUCTION.md) | Полная техническая инструкция: запуск, окружение, исправления |
-| [DEVSTORY.md](DEVSTORY.md) | История разработки по неделям и дням (2 разработчика) |
-| [docs/ARCHITECTURE_AND_DATABASES.md](docs/ARCHITECTURE_AND_DATABASES.md) | Схема работы приложения, диаграммы, БД (PostgreSQL/Redis), как смотреть данные |
-| [docs/API_GUIDE.md](docs/API_GUIDE.md) | Описание API |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Развёртывание на production |
-| [docs/FEATURES.md](docs/FEATURES.md) | Реализованный функционал |
+| [docs/ARCHITECTURE_AND_DATABASES.md](docs/ARCHITECTURE_AND_DATABASES.md) | Схема приложения, диаграммы, БД (PostgreSQL/Redis) |
+| [docs/API_GUIDE.md](docs/API_GUIDE.md) | Описание REST API (эндпоинты, запросы, ответы) |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Развёртывание на production (Docker, Nginx, SSL) |
+| [docs/FEATURES.md](docs/FEATURES.md) | Реализованный функционал по модулям |
+| [docs/COMPETITOR_ANALYSIS.md](docs/COMPETITOR_ANALYSIS.md) | Анализ конкурентов (School 21, Алгоритмика и др.) |
+| [docs/SOFTWARE_USED.md](docs/SOFTWARE_USED.md) | Список ПО проекта (зачем и почему) |
 
 ---
 
