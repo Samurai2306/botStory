@@ -55,7 +55,7 @@ export const authAPI = {
 export const userAPI = {
   getProfile: () => api.get('/users/me'),
   getStats: () => api.get<{ completed: number; total: number; progress_percent: number }>('/users/me/stats'),
-  getLevelProgress: () => api.get<{ level_id: number; completed: boolean }[]>('/users/me/progress'),
+  getLevelProgress: () => api.get<{ level_id: number; completed: boolean; best_steps_count?: number | null }[]>('/users/me/progress'),
   updateProfile: (data: any) => api.patch('/users/me', data),
 }
 
@@ -64,6 +64,8 @@ export const levelAPI = {
   getAll: () => api.get('/levels'),
   getById: (id: number) => api.get(`/levels/${id}`),
   getProgress: (id: number) => api.get(`/levels/${id}/progress`),
+  getWords: (level_id: number) => api.get<{ words: string[] }>(`/levels/${level_id}/words`),
+  setWords: (level_id: number, data: { words: string[] }) => api.put(`/levels/${level_id}/words`, data),
   submitSolution: (id: number, data: { user_code: string; steps_count: number }) =>
     api.post(`/levels/${Number(id)}/progress`, {
       level_id: Number(id),

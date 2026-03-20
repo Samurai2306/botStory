@@ -23,10 +23,13 @@ class ExecuteResponse(BaseModel):
     history: List[tuple]
     final_position: Dict[str, Any]
     error: Optional[str] = None
+    events: Optional[List[Dict[str, Any]]] = None
 
     # Comparison with golden standard
     is_optimal: Optional[bool] = None
     golden_steps_count: Optional[int] = None
+    mine_history: Optional[List[tuple]] = None
+    gates_history: Optional[List[Dict[str, bool]]] = None
 
 
 @router.post("/", response_model=ExecuteResponse)
@@ -70,22 +73,19 @@ async def execute_code(
 
 @router.get("/test")
 async def test_executor():
-    """Test executor with simple map"""
+    """Test executor with simple map (старт → финиш за 3 шага)"""
     test_map = {
-        "width": 5,
-        "height": 5,
+        "width": 3,
+        "height": 3,
         "cells": [
-            ["empty", "empty", "empty", "empty", "empty"],
-            ["empty", "start", "empty", "empty", "empty"],
-            ["empty", "empty", "empty", "wall", "empty"],
-            ["empty", "empty", "empty", "empty", "empty"],
-            ["empty", "empty", "finish", "empty", "empty"]
-        ]
+            ["empty", "empty", "empty"],
+            ["empty", "start", "empty"],
+            ["empty", "finish", "empty"],
+        ],
     }
-    
+
     test_code = """
-    вперед
-    вперед
+    направо
     направо
     вперед
     """

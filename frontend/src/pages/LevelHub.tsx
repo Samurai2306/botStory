@@ -11,6 +11,7 @@ interface Level {
   order: number
   difficulty: number
   is_active: boolean
+  golden_steps_count?: number
 }
 
 /** Секции миссий по языкам: только Кумир пока с реальными уровнями */
@@ -23,18 +24,18 @@ const LANGUAGE_SECTIONS = [
 
 export default function LevelHub() {
   const [levels, setLevels] = useState<Level[]>([])
-  const [progressMap, setProgressMap] = useState<Record<number, boolean>>({})
+  const [progressMap, setProgressMap] = useState<Record<number, { completed: boolean; best_steps_count?: number | null }>>({})
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'completed' | 'active'>('all')
+  const [filter, setFilter] = useState<'all' | 'completed' | 'active' | 'worse'>('all')
   const [activeSection, setActiveSection] = useState<string>(LANGUAGE_SECTIONS[0].id)
 
   useEffect(() => {
     Promise.all([levelAPI.getAll(), userAPI.getLevelProgress()])
       .then(([levelsRes, progressRes]) => {
         setLevels(levelsRes.data)
-        const map: Record<number, boolean> = {}
-        ;(progressRes.data || []).forEach((p: { level_id: number; completed: boolean }) => {
-          map[p.level_id] = p.completed
+        const map: Record<number, { completed: boolean; best_steps_count?: number | null }> = {}
+        ;(progressRes.data || []).forEach((p: { level_id: number; completed: boolean; best_steps_count?: number | null }) => {
+          map[p.level_id] = { completed: p.completed, best_steps_count: p.best_steps_count }
         })
         setProgressMap(map)
       })
@@ -46,8 +47,24 @@ export default function LevelHub() {
 
   const filteredLevels = useMemo(() => {
     if (filter === 'all') return levels
-    if (filter === 'completed') return levels.filter(l => progressMap[l.id])
-    return levels.filter(l => !progressMap[l.id])
+    if (filter === 'active') return levels.filter(l => !progressMap[l.id]?.completed)
+    if (filter === 'completed') {
+      return levels.filter(l => {
+        const prog = progressMap[l.id]
+        const golden = l.golden_steps_count
+        if (!prog?.completed) return false
+        if (golden == null || prog.best_steps_count == null) return true
+        return prog.best_steps_count <= golden
+      })
+    }
+    // filter === 'worse' — пройдено, но хуже эталона
+    return levels.filter(l => {
+      const prog = progressMap[l.id]
+      const golden = l.golden_steps_count
+      if (!prog?.completed) return false
+      if (golden == null || prog.best_steps_count == null) return false
+      return prog.best_steps_count > golden
+    })
   }, [levels, filter, progressMap])
 
   if (loading) {
@@ -121,9 +138,22 @@ export default function LevelHub() {
             >
               ✓ ПРОЙДЕННЫЕ
             </button>
+            <button 
+              className={`filter-btn ${filter === 'worse' ? 'active' : ''}`}
+              onClick={() => setFilter('worse')}
+            >
+              ⚠ ПРОЙДЕНО ХУЖЕ ЭТАЛОНА
+            </button>
           </div>
           <div className="level-count">
-            <span className="glow-text">{filteredLevels.length}</span> {filter === 'all' ? 'доступных миссий' : filter === 'completed' ? 'пройдено' : 'в процессе'}
+            <span className="glow-text">{filteredLevels.length}</span>{' '}
+            {filter === 'all'
+              ? 'доступных миссий'
+              : filter === 'completed'
+              ? 'пройдено на уровне эталона'
+              : filter === 'worse'
+              ? 'пройдено хуже эталона'
+              : 'в процессе'}
           </div>
         </motion.div>
       )}
@@ -169,12 +199,33 @@ export default function LevelHub() {
                 <div className="iso-cube">
                   {['front', 'back', 'top', 'bottom', 'left', 'right'].map((face) => (
                     <div key={face} className={`iso-face ${face}`}>
-                      <span
-                        className={`iso-face-icon ${progressMap[level.id] ? 'completed' : 'active'}`}
-                        aria-hidden
-                      >
-                        {progressMap[level.id] ? '✓' : '✗'}
-                      </span>
+                      {(() => {
+                        const prog = progressMap[level.id]
+                        const golden = level.golden_steps_count
+                        let state: 'none' | 'optimal' | 'partial' = 'none'
+                        if (prog?.completed) {
+                          if (golden != null && prog.best_steps_count != null && prog.best_steps_count <= golden) {
+                            state = 'optimal'
+                          } else {
+                            state = 'partial'
+                          }
+                        }
+                        const iconClass =
+                          state === 'optimal'
+                            ? 'completed-optimal'
+                            : state === 'partial'
+                            ? 'completed-partial'
+                            : 'active'
+                        const symbol = state === 'optimal' ? '✓' : state === 'partial' ? '⚠' : '✗'
+                        return (
+                          <span
+                            className={`iso-face-icon ${iconClass}`}
+                            aria-hidden
+                          >
+                            {symbol}
+                          </span>
+                        )
+                      })()}
                     </div>
                   ))}
                 </div>

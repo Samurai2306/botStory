@@ -153,6 +153,13 @@ export default function Landing() {
                 </div>
                 <div className="display-line">
                   <span className="display-prompt">user@botstory:~$</span>
+                  <span className="display-cmd">./play_games.sh</span>
+                </div>
+                <div className="display-line">
+                  <Link to="/games" className="display-output display-gamelink">Открыть мини-игры →</Link>
+                </div>
+                <div className="display-line">
+                  <span className="display-prompt">user@botstory:~$</span>
                   <span className="display-cursor" />
                 </div>
               </div>

@@ -7,8 +7,10 @@ import LevelHub from './pages/LevelHub'
 import GamePlay from './pages/GamePlay'
 import Briefing from './pages/Briefing'
 import Profile from './pages/Profile'
+import Settings from './pages/Settings'
 import AdminPanel from './pages/AdminPanel'
 import Community from './pages/Community'
+import Games from './pages/Games'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -69,7 +71,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/community" element={<Community />} />
+          <Route path="/games" element={<Games />} />
           <Route
             path="/admin"
             element={

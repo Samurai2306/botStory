@@ -22,6 +22,9 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     username: Optional[str] = None
     password: Optional[str] = None
+    hint_word: Optional[str] = None
+    locale: Optional[str] = None
+    terminal_theme: Optional[str] = None
 
 
 class UserResponse(UserBase):
@@ -29,7 +32,10 @@ class UserResponse(UserBase):
     role: UserRole
     is_active: bool
     created_at: datetime
-    
+    hint_word: Optional[str] = None
+    locale: Optional[str] = None
+    terminal_theme: Optional[str] = None
+
     class Config:
         from_attributes = True
 
