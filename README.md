@@ -149,6 +149,15 @@ botStory/
 
 ---
 
+## Тесты
+
+| Где | Команда |
+|-----|---------|
+| Backend (рекомендуется Docker, Python 3.11 в образе) | `docker compose run --rm --no-deps backend pytest tests -v` |
+| Frontend | `cd frontend && npm install && npm run test` |
+
+Подробный отчёт по сценариям (12+ тестовых примеров) и расшифровка полей: [docs/converted-document.md](docs/converted-document.md).
+
 ## Документация
 
 | Документ | Содержание |

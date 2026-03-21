@@ -374,6 +374,51 @@
   border: 1px solid var(--border-glass);
 }
 
+.map-mode {
+  display: inline-flex;
+  border: 1px solid rgba(139, 126, 216, 0.25);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.25);
+}
+.map-mode-btn {
+  padding: 0.55rem 0.85rem;
+  font-family: 'Minecraft', 'Orbitron', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  color: rgba(226, 232, 240, 0.75);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.map-mode-btn.active {
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(139, 126, 216, 0.25);
+  box-shadow: inset 0 0 18px rgba(139, 126, 216, 0.18);
+}
+
+.map-object-options {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.map-toggle {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0.45rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(139, 126, 216, 0.22);
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(226, 232, 240, 0.82);
+  font-size: 0.9rem;
+}
+.map-toggle input {
+  accent-color: rgba(139, 126, 216, 0.9);
+}
+
 .map-toolbar-label {
   font-weight: 600;
   color: var(--text-secondary);
@@ -653,34 +698,53 @@
 }
 
 /* Пусто */
-.map-cell--empty {
-  background: linear-gradient(145deg, rgba(50, 45, 65, 0.9), rgba(30, 28, 40, 0.95));
+/* Платформа */
+.map-cell--platform {
+  background: linear-gradient(145deg, rgba(50, 45, 65, 0.75), rgba(24, 20, 34, 0.95));
   border-color: rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
+  color: rgba(240, 240, 255, 0.92);
 }
 
-.map-cell--empty:hover {
-  border-color: rgba(139, 126, 216, 0.4);
+.map-cell--platform:hover {
+  border-color: rgba(139, 126, 216, 0.45);
+}
+
+/* Пустота (void) */
+.map-cell--void {
+  background: radial-gradient(circle at 40% 35%, rgba(0, 0, 0, 0.9), rgba(10, 10, 18, 0.95) 55%, rgba(0, 0, 0, 0.98));
+  border-color: rgba(139, 126, 216, 0.25);
+  color: rgba(200, 200, 220, 0.7);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8);
+}
+
+.map-cell--void:hover {
+  border-color: rgba(139, 126, 216, 0.55);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.85), 0 0 14px rgba(139, 126, 216, 0.25);
+}
+
+/* Сломанный пол */
+.map-cell--broken_floor {
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.18), rgba(30, 28, 40, 0.92));
+  border-color: rgba(251, 191, 36, 0.35);
+  color: rgba(255, 230, 200, 0.9);
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
+}
+
+.map-cell--broken_floor:hover {
+  border-color: rgba(251, 191, 36, 0.55);
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.18), 0 0 24px rgba(139, 126, 216, 0.2);
 }
 
 /* Стена */
-.map-cell--wall {
+.map-cell--obj-wall {
   background: linear-gradient(145deg, #1a1a2e, #0f0f18);
   border-color: rgba(184, 169, 232, 0.4);
   color: var(--text-secondary);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
-/* Ловушка */
-.map-cell--trap {
-  background: linear-gradient(145deg, rgba(248, 113, 113, 0.35), rgba(220, 38, 38, 0.4));
-  border-color: rgba(248, 113, 113, 0.5);
-  color: #fecaca;
-  text-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
-}
-
 /* Старт */
-.map-cell--start {
+.map-cell--obj-start {
   background: linear-gradient(145deg, rgba(139, 126, 216, 0.4), rgba(184, 169, 232, 0.5));
   border-color: rgba(139, 126, 216, 0.7);
   color: #e9d5ff;
@@ -688,11 +752,35 @@
 }
 
 /* Финиш */
-.map-cell--finish {
+.map-cell--obj-finish {
   background: linear-gradient(145deg, rgba(251, 191, 36, 0.35), rgba(245, 158, 11, 0.45));
   border-color: rgba(251, 191, 36, 0.6);
   color: #fef3c7;
   text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+/* Умная мина */
+.map-cell--obj-smart_mine {
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.22), rgba(12, 10, 22, 0.92));
+  border-color: rgba(251, 191, 36, 0.55);
+  color: rgba(255, 240, 200, 0.95);
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
+}
+
+/* Переключатель шлюза */
+.map-cell--obj-lever {
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.16), rgba(239, 68, 68, 0.14), rgba(12, 10, 22, 0.92));
+  border-color: rgba(96, 165, 250, 0.35);
+  color: rgba(226, 232, 240, 0.92);
+  box-shadow: inset 0 0 14px rgba(139, 126, 216, 0.15);
+}
+
+/* Шлюз */
+.map-cell--obj-gate {
+  background: linear-gradient(145deg, rgba(96, 165, 250, 0.18), rgba(139, 126, 216, 0.18), rgba(12, 10, 22, 0.92));
+  border-color: rgba(96, 165, 250, 0.45);
+  color: rgba(226, 232, 240, 0.92);
+  text-shadow: 0 0 10px rgba(96, 165, 250, 0.25);
 }
 
 .submit-btn {

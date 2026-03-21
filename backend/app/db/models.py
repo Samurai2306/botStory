@@ -23,9 +23,13 @@ class User(Base):
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     is_active = Column(Boolean, default=True)
+    hint_word = Column(String(100), nullable=True)  # Одно слово-подсказка для всех уровней
+    locale = Column(String(10), nullable=False, server_default="ru")
+    terminal_theme = Column(String(20), nullable=False, server_default="linux")
     
     # Relationships
     level_progress = relationship("LevelProgress", back_populates="user", cascade="all, delete-orphan")
+    level_words = relationship("LevelWords", back_populates="user", cascade="all, delete-orphan")
     notes = relationship("Note", back_populates="user", cascade="all, delete-orphan")
     highlights = relationship("Highlight", back_populates="user", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
@@ -62,6 +66,7 @@ class Level(Base):
     messages = relationship("Message", back_populates="level", cascade="all, delete-orphan")
     notes = relationship("Note", back_populates="level")
     highlights = relationship("Highlight", back_populates="level")
+    level_words = relationship("LevelWords", back_populates="level", cascade="all, delete-orphan")
 
 
 class LevelProgress(Base):
@@ -136,6 +141,22 @@ class Highlight(Base):
     # Relationships
     user = relationship("User", back_populates="highlights")
     level = relationship("Level", back_populates="highlights")
+
+
+class LevelWords(Base):
+    __tablename__ = "level_words"
+    __table_args__ = (UniqueConstraint("user_id", "level_id", name="uq_level_words_user_level"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    level_id = Column(Integer, ForeignKey("levels.id"), nullable=False)
+    words = Column(JSON, nullable=False)  # список до 10 слов: ["word1", "word2", ...]
+
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="level_words")
+    level = relationship("Level", back_populates="level_words")
 
 
 class Message(Base):

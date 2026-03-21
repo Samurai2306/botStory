@@ -34,6 +34,7 @@ class LevelResponse(LevelBase):
     map_data: Dict[str, Any]
     is_active: bool
     created_at: datetime
+    golden_steps_count: Optional[int] = None
     
     class Config:
         from_attributes = True

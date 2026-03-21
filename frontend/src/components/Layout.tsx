@@ -75,6 +75,13 @@ export default function Layout() {
           >
             ◐ СООБЩЕСТВО
           </Link>
+          <Link
+            to="/settings"
+            className={isActive('/settings') ? 'active' : ''}
+            onClick={() => setMenuOpen(false)}
+          >
+            ⚙ НАСТРОЙКИ
+          </Link>
           {user?.role === 'admin' && (
             <Link 
               to="/admin" 

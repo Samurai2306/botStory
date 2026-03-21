@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { authAPI, userAPI } from '../services/api'
 
-function authErrorToRu(detail: string | string[]): string {
+/** Сообщения API → UI (покрыто unit-тестами). */
+export function authErrorToRu(detail: string | string[]): string {
   const raw = Array.isArray(detail) ? detail[0] : detail
   if (!raw || typeof raw !== 'string') return 'Ошибка'
   const map: Record<string, string> = {
@@ -20,6 +21,9 @@ interface User {
   role: 'guest' | 'user' | 'admin'
   is_active: boolean
   created_at: string
+  hint_word?: string | null
+  locale?: 'ru' | 'en' | string | null
+  terminal_theme?: 'windows' | 'macos' | 'linux' | string | null
 }
 
 interface AuthState {

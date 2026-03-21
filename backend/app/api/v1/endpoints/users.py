@@ -21,6 +21,7 @@ class UserStatsResponse(BaseModel):
 class LevelProgressItem(BaseModel):
     level_id: int
     completed: bool
+    best_steps_count: int | None = None
 
 
 @router.get("/me", response_model=UserResponse)
@@ -50,10 +51,21 @@ async def get_current_user_level_progress(
     db: Session = Depends(get_db)
 ):
     """Get completion status for each level (for LevelHub filters and badges)"""
-    rows = db.query(LevelProgress.level_id, LevelProgress.completed).filter(
+    rows = db.query(
+        LevelProgress.level_id,
+        LevelProgress.completed,
+        LevelProgress.best_steps_count,
+    ).filter(
         LevelProgress.user_id == current_user.id
     ).all()
-    return [LevelProgressItem(level_id=r.level_id, completed=r.completed) for r in rows]
+    return [
+        LevelProgressItem(
+            level_id=r.level_id,
+            completed=r.completed,
+            best_steps_count=r.best_steps_count,
+        )
+        for r in rows
+    ]
 
 
 @router.patch("/me", response_model=UserResponse)
@@ -93,7 +105,29 @@ async def update_current_user(
     
     if "password" in update_data:
         current_user.password_hash = get_password_hash(update_data["password"])
-    
+
+    if "hint_word" in update_data:
+        val = update_data["hint_word"]
+        current_user.hint_word = (val.strip() if isinstance(val, str) else None) or None
+
+    if "locale" in update_data:
+        val = update_data["locale"]
+        if val is None:
+            pass
+        elif val not in ("ru", "en"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid locale")
+        else:
+            current_user.locale = val
+
+    if "terminal_theme" in update_data:
+        val = update_data["terminal_theme"]
+        if val is None:
+            pass
+        elif val not in ("windows", "macos", "linux"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid terminal theme")
+        else:
+            current_user.terminal_theme = val
+
     db.commit()
     db.refresh(current_user)
     

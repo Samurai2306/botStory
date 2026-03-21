@@ -4,11 +4,12 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app.db.database import get_db
-from app.db.models import Level, LevelProgress, User, UserRole
+from app.db.models import Level, LevelProgress, LevelWords, User, UserRole
 from app.schemas.level import (
     LevelCreate, LevelUpdate, LevelResponse, LevelDetailResponse,
     LevelProgressCreate, LevelProgressResponse
 )
+from app.schemas.level_words import LevelWordsUpdate, LevelWordsResponse
 from app.core.deps import get_current_user, get_current_admin, get_optional_user
 
 router = APIRouter()
@@ -118,6 +119,51 @@ async def delete_level(
     db.commit()
     
     return None
+
+
+@router.get("/{level_id}/words", response_model=LevelWordsResponse)
+async def get_level_words(
+    level_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get current user's 10 words for this level"""
+    level = db.query(Level).filter(Level.id == level_id).first()
+    if not level:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Level not found")
+    row = db.query(LevelWords).filter(
+        LevelWords.level_id == level_id,
+        LevelWords.user_id == current_user.id
+    ).first()
+    return LevelWordsResponse(words=row.words if row else [])
+
+
+@router.put("/{level_id}/words", response_model=LevelWordsResponse)
+async def set_level_words(
+    level_id: int,
+    data: LevelWordsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Set current user's words for this level (max 10)"""
+    level = db.query(Level).filter(Level.id == level_id).first()
+    if not level:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Level not found")
+    row = db.query(LevelWords).filter(
+        LevelWords.level_id == level_id,
+        LevelWords.user_id == current_user.id
+    ).first()
+    words = data.words[:10]
+    if row:
+        row.words = words
+        db.commit()
+        db.refresh(row)
+        return LevelWordsResponse(words=row.words)
+    row = LevelWords(user_id=current_user.id, level_id=level_id, words=words)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return LevelWordsResponse(words=row.words)
 
 
 @router.get("/{level_id}/progress", response_model=LevelProgressResponse)
