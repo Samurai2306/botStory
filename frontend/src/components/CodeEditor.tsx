@@ -1,5 +1,5 @@
 import { EditorState } from '@codemirror/state'
-import { EditorView, keymap } from '@codemirror/view'
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, scrollPastEnd } from '@codemirror/view'
 import { defaultKeymap } from '@codemirror/commands'
 import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
@@ -12,6 +12,7 @@ interface Props {
   onExecute: () => void
   onReset: () => void
   isExecuting: boolean
+  onSwitchToTerminal?: () => void
 }
 
 // Custom Kumir syntax highlighting
@@ -21,7 +22,7 @@ const kumirHighlight = HighlightStyle.define([
   { tag: tags.number, color: '#fbbf24' },
 ])
 
-export default function CodeEditor({ value, onChange, onExecute, onReset, isExecuting }: Props) {
+export default function CodeEditor({ value, onChange, onExecute, onReset, isExecuting, onSwitchToTerminal }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
 
@@ -31,6 +32,10 @@ export default function CodeEditor({ value, onChange, onExecute, onReset, isExec
     const startState = EditorState.create({
       doc: value,
       extensions: [
+        lineNumbers(),
+        highlightActiveLineGutter(),
+        highlightActiveLine(),
+        scrollPastEnd(),
         keymap.of(defaultKeymap),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
@@ -52,6 +57,13 @@ export default function CodeEditor({ value, onChange, onExecute, onReset, isExec
             background: 'rgba(12, 10, 22, 0.98)',
             color: 'rgba(139, 126, 216, 0.5)',
             border: 'none',
+          },
+          '.cm-activeLineGutter': {
+            background: 'rgba(139, 126, 216, 0.12)',
+            color: 'rgba(184, 169, 232, 0.95)',
+          },
+          '.cm-activeLine': {
+            background: 'rgba(139, 126, 216, 0.08)',
           },
         }),
       ],
@@ -91,8 +103,13 @@ export default function CodeEditor({ value, onChange, onExecute, onReset, isExec
         <button onClick={onReset} className="reset-btn">
           🔄 Сброс
         </button>
+        {onSwitchToTerminal && (
+          <button type="button" onClick={onSwitchToTerminal} className="terminal-btn" title="Вернуться к терминалу">
+            ◫ Терминал
+          </button>
+        )}
         <div className="editor-hint">
-          Команды: вперед, налево, направо, нц N раз ... кц
+          Команды: вперед, налево, направо, использовать, нц N раз ... кц
         </div>
       </div>
       <div ref={editorRef} className="code-editor" />

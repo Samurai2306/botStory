@@ -6,104 +6,95 @@ interface Props {
   levelId: number
 }
 
+interface Note {
+  id: number
+  content: string
+  created_at: string
+}
+
+interface Highlight {
+  id: number
+  text_fragment: string
+  color: string
+}
+
 export default function Diary({ levelId }: Props) {
-  const [notes, setNotes] = useState<any[]>([])
-  const [highlights, setHighlights] = useState<any[]>([])
+  const [notes, setNotes] = useState<Note[]>([])
+  const [highlights, setHighlights] = useState<Highlight[]>([])
   const [newNote, setNewNote] = useState('')
-  const [activeTab, setActiveTab] = useState<'highlights' | 'notes'>('highlights')
 
   useEffect(() => {
-    loadData()
+    loadNotes()
+    loadHighlights()
   }, [levelId])
 
-  const loadData = () => {
-    notesAPI.getAll(levelId)
-      .then(res => setNotes(res.data))
-      .catch(console.error)
-    
-    highlightsAPI.getForLevel(levelId)
-      .then(res => setHighlights(res.data))
-      .catch(console.error)
+  const loadNotes = () => {
+    notesAPI.getAll(levelId).then(res => setNotes(res.data || [])).catch(console.error)
+  }
+  const loadHighlights = () => {
+    highlightsAPI.getForLevel(levelId).then(res => setHighlights(res.data || [])).catch(console.error)
   }
 
   const handleAddNote = () => {
     if (!newNote.trim()) return
-    
-    notesAPI.create({
-      level_id: levelId,
-      content: newNote,
-      type: 'custom'
-    }).then(() => {
-      setNewNote('')
-      loadData()
-    }).catch(console.error)
+    notesAPI.create({ level_id: levelId, content: newNote.trim(), type: 'custom' })
+      .then(() => { setNewNote(''); loadNotes() })
+      .catch(console.error)
   }
+
+  const handleDeleteNote = (noteId: number) => {
+    notesAPI.delete(noteId).then(loadNotes).catch(console.error)
+  }
+
+  const formatDate = (s: string) => new Date(s).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
   return (
     <div className="diary">
-      <h3>Дневник исследователя</h3>
-      
-      <div className="diary-tabs">
-        <button 
-          className={activeTab === 'highlights' ? 'active' : ''}
-          onClick={() => setActiveTab('highlights')}
-        >
-          Выделения ({highlights.length})
-        </button>
-        <button 
-          className={activeTab === 'notes' ? 'active' : ''}
-          onClick={() => setActiveTab('notes')}
-        >
-          Заметки ({notes.length})
-        </button>
-      </div>
-      
-      <div className="diary-content">
-        {activeTab === 'highlights' && (
-          <div className="highlights-list">
-            {highlights.length === 0 && (
-              <p className="empty-message">
-                Пока нет выделений. Выделите важный текст в брифинге!
-              </p>
-            )}
-            {highlights.map(h => (
-              <div key={h.id} className={`highlight-item ${h.color}`}>
-                <div className="highlight-text">"{h.text_fragment}"</div>
-                <div className="highlight-meta">{h.color}</div>
+      <section className="diary-section diary-notes">
+        <h3 className="diary-section-title">Заметки к уровню</h3>
+        <div className="diary-note-form">
+          <textarea
+            value={newNote}
+            onChange={e => setNewNote(e.target.value)}
+            placeholder="Добавить заметку во время прохождения..."
+            rows={2}
+          />
+          <button type="button" className="diary-add-btn" onClick={handleAddNote}>
+            Добавить
+          </button>
+        </div>
+        <div className="diary-note-list">
+          {notes.length === 0 && (
+            <p className="diary-empty">Пока нет заметок. Добавьте идеи или выводы по ходу решения.</p>
+          )}
+          {notes.map(note => (
+            <div key={note.id} className="diary-note-item">
+              <p className="diary-note-content">{note.content}</p>
+              <div className="diary-note-footer">
+                <span className="diary-note-date">{formatDate(note.created_at)}</span>
+                <button type="button" className="diary-note-delete" onClick={() => handleDeleteNote(note.id)} title="Удалить">
+                  ×
+                </button>
               </div>
-            ))}
-          </div>
-        )}
-        
-        {activeTab === 'notes' && (
-          <div className="notes-list">
-            <div className="note-input">
-              <textarea
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Добавить заметку..."
-                rows={3}
-              />
-              <button onClick={handleAddNote} className="add-note-btn">
-                Добавить
-              </button>
             </div>
-            
-            {notes.map(note => (
-              <div key={note.id} className="note-item">
-                <div className="note-content">{note.content}</div>
-                <div className="note-date">
-                  {new Date(note.created_at).toLocaleDateString('ru-RU')}
-                </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="diary-section diary-highlights">
+        <h3 className="diary-section-title">Выделения из брифинга</h3>
+        {highlights.length === 0 ? (
+          <p className="diary-empty">Нет сохранённых выделений. Выделите важные места в предыстории перед миссией.</p>
+        ) : (
+          <div className="diary-highlight-list">
+            {highlights.map(h => (
+              <div key={h.id} className={`diary-highlight-item ${h.color}`}>
+                "{h.text_fragment}"
               </div>
             ))}
-            
-            {notes.length === 0 && (
-              <p className="empty-message">Пока нет заметок</p>
-            )}
           </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }

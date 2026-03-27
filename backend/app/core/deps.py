@@ -27,11 +27,15 @@ async def get_current_user(
     payload = decode_token(token)
     if payload is None:
         raise credentials_exception
-    
-    user_id: int = payload.get("sub")
+
+    sub = payload.get("sub")
+    try:
+        user_id = int(sub) if sub is not None else None
+    except (TypeError, ValueError):
+        user_id = None
     if user_id is None:
         raise credentials_exception
-    
+
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise credentials_exception
@@ -81,11 +85,15 @@ def get_optional_user(
         payload = decode_token(token)
         if payload is None:
             return None
-        
-        user_id: int = payload.get("sub")
+
+        sub = payload.get("sub")
+        try:
+            user_id = int(sub) if sub is not None else None
+        except (TypeError, ValueError):
+            return None
         if user_id is None:
             return None
-        
+
         user = db.query(User).filter(User.id == user_id).first()
         return user
     except:

@@ -119,6 +119,272 @@
   animation: titleGlow 2s ease-in-out infinite;
 }
 
+/* -------- Terminal briefing (new) -------- */
+.briefing-terminal {
+  width: 100%;
+  max-width: 980px;
+  position: relative;
+  z-index: 2;
+}
+
+.briefing-terminal-screen {
+  width: 100%;
+  min-height: 520px;
+  background: linear-gradient(180deg, #0d0d14 0%, #12121a 50%, #0a0a10 100%);
+  border-radius: 14px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.briefing-terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.briefing-terminal-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.briefing-terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.briefing-terminal-dot.red { background: #ff5f56; }
+.briefing-terminal-dot.yellow { background: #ffbd2e; }
+.briefing-terminal-dot.green { background: #27ca3f; }
+
+.briefing-terminal-title {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-family: 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+}
+
+.briefing-terminal-badge {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.briefing-terminal-content {
+  padding: 16px;
+  font-family: 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.briefing-terminal-line {
+  margin-bottom: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  opacity: 0;
+  transform: translateY(2px);
+  animation: briefingLineIn 0.25s ease forwards;
+}
+
+.briefing-terminal-line.sys {
+  color: rgba(210, 192, 240, 0.95);
+}
+
+.briefing-terminal-line.cmd {
+  color: rgba(240, 240, 255, 0.95);
+}
+
+.briefing-terminal-line.out {
+  color: rgba(170, 140, 220, 0.95);
+}
+
+/* Строка в состоянии «ещё не начали печатать» — не занимает место и без курсора */
+.briefing-terminal-line-empty {
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  min-height: 0;
+}
+
+.briefing-terminal-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  margin-left: 2px;
+  background: currentColor;
+  vertical-align: text-bottom;
+  animation: briefingCursorBlink 0.9s step-end infinite;
+}
+
+@keyframes briefingCursorBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.briefing-terminal-gamelink {
+  color: #00ff41;
+  font-weight: 600;
+  text-decoration: none;
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+  animation: briefingGlowPulse 2s ease-in-out infinite;
+}
+.briefing-terminal-gamelink:hover {
+  color: #00ff88;
+  text-shadow: 0 0 15px rgba(0, 255, 136, 0.8);
+  animation: none;
+}
+@keyframes briefingGlowPulse {
+  0%, 100% { text-shadow: 0 0 10px rgba(0, 255, 65, 0.5); }
+  50% { text-shadow: 0 0 20px rgba(0, 255, 65, 0.8); }
+}
+
+.briefing-terminal-inputline {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: none;
+  min-height: 1.6em;
+}
+
+.briefing-terminal-prompt,
+.briefing-terminal-prompt-user {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.briefing-terminal-prompt-user {
+  color: #c084fc;
+}
+
+.briefing-terminal-prompt-end {
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.briefing-terminal-prompt {
+  /* Linux по умолчанию — зелёный prompt */
+  color: #00ff6a;
+  margin-right: 4px;
+}
+
+.briefing-terminal-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  border-radius: 0;
+  color: rgba(255, 255, 255, 0.95);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 0;
+  caret-color: rgba(255, 255, 255, 0.9);
+  appearance: none;
+}
+
+.briefing-terminal-input:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+.briefing-terminal-input::placeholder {
+  color: transparent;
+}
+
+@keyframes briefingLineIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Theme: Windows */
+.terminal-theme-windows .briefing-terminal-screen {
+  background: linear-gradient(135deg, #0f0f10, #121216, #0b0b0c);
+}
+
+.terminal-theme-windows .briefing-terminal-header {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.briefing-terminal-wintitle {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+}
+
+.terminal-theme-windows .briefing-terminal-prompt {
+  color: rgba(180, 220, 255, 0.9);
+}
+
+/* Theme: macOS */
+.terminal-theme-macos .briefing-terminal-prompt-user {
+  color: #c084fc;
+}
+.terminal-theme-macos .briefing-terminal-prompt-end {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Theme: Linux (default) */
+.terminal-theme-linux .briefing-terminal-screen {
+  background: radial-gradient(circle at top left, rgba(0, 255, 106, 0.06), transparent 55%),
+              radial-gradient(circle at bottom right, rgba(0, 180, 120, 0.08), transparent 55%),
+              linear-gradient(180deg, #05070a 0%, #05080b 35%, #040408 100%);
+}
+.terminal-theme-linux .briefing-terminal-header {
+  background: rgba(0, 0, 0, 0.55);
+  border-bottom-color: rgba(0, 255, 106, 0.25);
+}
+.terminal-theme-linux .briefing-terminal-prompt,
+.terminal-theme-linux .briefing-terminal-prompt-user {
+  color: #00ff6a;
+}
+
+/* Theme: macOS — более мягкий, фиолетово-серый */
+.terminal-theme-macos .briefing-terminal-screen {
+  background: linear-gradient(180deg, #101018 0%, #151524 50%, #101018 100%);
+}
+.terminal-theme-macos .briefing-terminal-header {
+  background: rgba(20, 20, 32, 0.9);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 768px) {
+  .briefing-terminal-screen {
+    min-height: 560px;
+    border-radius: 12px;
+  }
+  .briefing-terminal-badge {
+    max-width: 55%;
+  }
+}
+
 .briefing h1::after {
   content: '';
   position: absolute;
@@ -147,104 +413,242 @@
     inset 0 0 20px rgba(139, 126, 216, 0.05);
 }
 
-.highlight-toolbar span:first-child {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--primary);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  font-family: 'Orbitron', monospace;
-  text-shadow: 0 0 10px var(--primary-glow);
+.briefing-loading {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  padding: 2rem;
 }
 
-.marker-btn {
-  padding: 0.75rem 1.25rem;
-  border: 2px solid transparent;
+.briefing-error {
+  text-align: center;
+}
+
+.briefing-error-text {
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.briefing-back-btn {
+  padding: 0.75rem 1.5rem;
+  background: rgba(139, 126, 216, 0.2);
+  border: 1px solid var(--primary);
   border-radius: 8px;
-  cursor: pointer;
+  color: var(--primary);
   font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.briefing-back-btn:hover {
+  background: rgba(139, 126, 216, 0.35);
+  box-shadow: 0 0 12px var(--primary-glow);
+}
+
+.narrative-empty {
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 0;
+}
+
+/* Удобное чтение: предыстория */
+.briefing-narrative-section {
+  margin-bottom: 2.5rem;
+}
+
+.narrative-readable {
+  font-size: 1.2rem;
+  line-height: 1.85;
+  color: var(--text-primary);
+  padding: 2rem 2.25rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(139, 126, 216, 0.12);
+  border-radius: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+  font-family: 'Rajdhani', 'Georgia', serif;
+  letter-spacing: 0.02em;
+  max-width: 100%;
+}
+
+.narrative-readable p {
+  margin-bottom: 1.1em;
+  text-indent: 1.75em;
+}
+
+.narrative-readable p:first-of-type {
+  text-indent: 0;
+}
+
+.narrative-readable p:first-letter {
+  font-size: 1.4em;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.narrative-readable::selection {
+  background: rgba(139, 126, 216, 0.35);
+  color: #fff;
+}
+
+/* 10 слов для уровня */
+.briefing-words-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(139, 126, 216, 0.2);
+  border-radius: 12px;
+}
+
+.briefing-words-title,
+.briefing-hint-title {
+  margin: 0 0 0.35rem 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+}
+
+.briefing-words-desc,
+.briefing-hint-desc {
+  margin: 0 0 1rem 0;
   font-size: 0.9rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
-.marker-btn::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: currentColor;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: width 0.5s, height 0.5s;
-  opacity: 0.2;
+.briefing-level-words-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.marker-btn:hover::before {
-  width: 200%;
-  height: 200%;
+.briefing-level-word-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.marker-btn.red {
+.briefing-level-word-num {
+  min-width: 1.75rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.briefing-level-word-input {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.briefing-level-word-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.briefing-level-word-remove {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: none;
   background: rgba(255, 107, 107, 0.2);
   color: #ff6b6b;
-  border-color: transparent;
-}
-
-.marker-btn.red.active {
-  border-color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.3);
-  box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
-}
-
-.marker-btn.yellow {
-  background: rgba(255, 217, 61, 0.2);
-  color: #ffd93d;
-  border-color: transparent;
-}
-
-.marker-btn.yellow.active {
-  border-color: #ffd93d;
-  background: rgba(255, 217, 61, 0.3);
-  box-shadow: 0 0 20px rgba(255, 217, 61, 0.4);
-}
-
-.marker-btn.green {
-  background: rgba(107, 207, 127, 0.2);
-  color: #6bcf7f;
-  border-color: transparent;
-}
-
-.marker-btn.green.active {
-  border-color: #6bcf7f;
-  background: rgba(107, 207, 127, 0.3);
-  box-shadow: 0 0 20px rgba(107, 207, 127, 0.4);
-}
-
-.save-highlight-btn {
-  margin-left: auto;
-  padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: var(--bg-dark);
-  border: 2px solid var(--primary);
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
+  border-radius: 6px;
+  font-size: 1.25rem;
+  line-height: 1;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 20px rgba(139, 126, 216, 0.3);
+  transition: background 0.2s;
 }
 
-.save-highlight-btn:hover {
-  box-shadow: 0 0 30px rgba(139, 126, 216, 0.5);
-  transform: translateY(-2px);
+.briefing-level-word-remove:hover {
+  background: rgba(255, 107, 107, 0.35);
+}
+
+.briefing-level-word-add {
+  margin-top: 0.25rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px dashed rgba(139, 126, 216, 0.5);
+  border-radius: 8px;
+  color: var(--primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.briefing-level-word-add:hover {
+  border-color: var(--primary);
+  background: rgba(139, 126, 216, 0.1);
+}
+
+.briefing-save-words-btn {
+  margin-top: 1rem;
+  padding: 0.5rem 1.25rem;
+  background: rgba(139, 126, 216, 0.3);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.briefing-save-words-btn:hover {
+  background: rgba(139, 126, 216, 0.45);
+  box-shadow: 0 0 12px var(--primary-glow);
+}
+
+/* Слово-подсказка для всех уровней */
+.briefing-hint-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(139, 126, 216, 0.2);
+  border-radius: 12px;
+}
+
+.briefing-hint-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.briefing-hint-input {
+  flex: 1;
+  max-width: 280px;
+  padding: 0.65rem 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.briefing-hint-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.briefing-hint-save {
+  padding: 0.65rem 1.25rem;
+  background: rgba(139, 126, 216, 0.3);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.briefing-hint-save:hover {
+  background: rgba(139, 126, 216, 0.45);
+  box-shadow: 0 0 12px var(--primary-glow);
 }
 
 .narrative {
@@ -263,33 +667,24 @@
   text-shadow: 0 0 10px rgba(139, 126, 216, 0.1);
 }
 
-.narrative::selection {
-  background: rgba(139, 126, 216, 0.3);
-  color: white;
-}
-
 .narrative p {
   margin-bottom: 1.25rem;
   text-indent: 2em;
 }
 
-.narrative p:first-letter {
-  font-size: 1.5em;
-  font-weight: 700;
-  color: var(--primary);
-  text-shadow: 0 0 15px var(--primary-glow);
-}
-
-/* Custom scrollbar for narrative */
+/* Scrollbar для блока предыстории */
+.narrative-readable::-webkit-scrollbar,
 .narrative::-webkit-scrollbar {
   width: 8px;
 }
 
+.narrative-readable::-webkit-scrollbar-track,
 .narrative::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 4px;
 }
 
+.narrative-readable::-webkit-scrollbar-thumb,
 .narrative::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, var(--primary), var(--secondary));
   border-radius: 4px;
@@ -382,20 +777,24 @@
   .briefing-container {
     padding: 2rem;
   }
-  
+
   .briefing h1 {
     font-size: 2rem;
   }
-  
-  .highlight-toolbar {
-    flex-direction: column;
+
+  .narrative-readable {
+    font-size: 1.1rem;
+    padding: 1.5rem;
   }
-  
-  .save-highlight-btn {
-    margin-left: 0;
-    width: 100%;
+
+  .briefing-hint-row {
+    flex-wrap: wrap;
   }
-  
+
+  .briefing-hint-input {
+    max-width: 100%;
+  }
+
   .start-mission-btn {
     font-size: 1.1rem;
     padding: 1.25rem 2rem;

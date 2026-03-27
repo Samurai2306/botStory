@@ -1,0 +1,170 @@
+/* Стиль как у терминала Briefing */
+.code-panel-terminal {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(139, 126, 216, 0.28);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 40px rgba(139, 126, 216, 0.06);
+}
+
+.code-panel-terminal-briefing-style .code-panel-terminal-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: linear-gradient(180deg, rgba(18, 14, 28, 0.98) 0%, rgba(10, 8, 18, 0.98) 100%);
+  border-radius: 14px;
+}
+
+.code-panel-terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(139, 126, 216, 0.18);
+}
+
+.code-panel-terminal-dots {
+  display: flex;
+  gap: 6px;
+}
+.code-panel-terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.code-panel-terminal-dot.red { background: #ff5f56; }
+.code-panel-terminal-dot.yellow { background: #ffbd2e; }
+.code-panel-terminal-dot.green { background: #27ca3f; }
+
+.code-panel-terminal-title {
+  flex: 1;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.code-panel-terminal-badge {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-panel-terminal-content {
+  flex: 1;
+  padding: 16px;
+  font-family: 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
+
+.code-panel-terminal-line {
+  margin-bottom: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.code-panel-terminal-line.cmd {
+  color: rgba(240, 240, 255, 0.92);
+}
+
+.code-panel-terminal-line.out {
+  color: rgba(170, 140, 220, 0.95);
+  position: relative;
+  padding-left: 10px;
+}
+.code-panel-terminal-line.out::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  opacity: 0.55;
+  font-size: 11px;
+}
+
+.code-panel-terminal-line.sys {
+  color: rgba(210, 192, 240, 0.95);
+  position: relative;
+  padding-left: 14px;
+}
+.code-panel-terminal-line.sys::before {
+  content: '◆';
+  position: absolute;
+  left: 0;
+  opacity: 0.5;
+  font-size: 10px;
+}
+
+.code-panel-terminal-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  margin-left: 2px;
+  background: currentColor;
+  vertical-align: text-bottom;
+  animation: codePanelCursorBlink 0.9s step-end infinite;
+}
+@keyframes codePanelCursorBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.code-panel-terminal-gamelink {
+  color: #00ff41;
+  font-weight: 600;
+  text-decoration: none;
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}
+.code-panel-terminal-gamelink:hover {
+  color: #00ff88;
+  text-shadow: 0 0 15px rgba(0, 255, 65, 0.8);
+}
+
+.code-panel-terminal-inputline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.code-panel-terminal-prompt {
+  color: rgb(92, 27, 176);
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.code-panel-terminal-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 6px 0;
+}
+
+.code-panel-terminal-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.code-panel-terminal-input:disabled {
+  opacity: 0.7;
+}

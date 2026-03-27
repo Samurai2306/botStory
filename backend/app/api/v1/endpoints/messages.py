@@ -6,6 +6,7 @@ from app.db.database import get_db
 from app.db.models import Message, User, LevelProgress
 from app.schemas.message import MessageCreate, MessageResponse
 from app.core.deps import get_current_user, get_current_admin
+from app.services.gamification_hooks import sync_gamification_for_users
 
 router = APIRouter()
 
@@ -67,7 +68,9 @@ async def create_message(
     db.add(db_message)
     db.commit()
     db.refresh(db_message)
-    
+    sync_gamification_for_users(db, current_user.id)
+    db.commit()
+
     # Create response with enriched data
     response = MessageResponse.from_orm(db_message)
     response.username = current_user.username

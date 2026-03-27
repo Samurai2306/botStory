@@ -34,6 +34,7 @@ docker-compose exec backend python scripts/seed_data.py
 - Frontend: http://localhost:5173  
 - API: http://localhost:8000  
 - Документация API: http://localhost:8000/docs  
+- Публичный профиль игрока (после логина можно скопировать ссылку в «Профиль»): `http://localhost:5173/user/<username>`  
 
 **Вход администратора:**  
 - Email: `admin@botstory.com`  
@@ -93,12 +94,24 @@ docker-compose ps
 ### Ошибка «Incorrect email or password» / «trapped bcrypt»
 
 - Вход: используйте `admin@botstory.com` / `admin` после создания админа через `create_admin_simple.py`.
+- После **пересоздания тома PostgreSQL** админа в БД нет — снова выполните:  
+  `docker-compose exec backend python scripts/create_admin_simple.py`
+- Если логин не принимается, **сбросьте пароль админа**:  
+  `docker-compose exec backend python scripts/create_admin_simple.py --reset`
 - Если при создании админа падает bcrypt — в проекте используется прямой `bcrypt` в `app/core/security.py` и в `create_admin_simple.py`; убедитесь, что не вызывается старый `create_admin.py` с passlib.
+
+### Сообщение «Ошибка входа» без уточнения (красный баннер)
+
+Обычно **нет ответа от API** (backend не запущен, неверный `VITE_API_URL`, порт не 8000).
+
+- Проверьте: `curl http://localhost:8000/docs` или откройте в браузере.
+- В `frontend` по умолчанию запросы идут на `http://localhost:8000` (`VITE_API_URL`). Если backend на другом порту — задайте переменную или поправьте URL.
+- При **`npm run dev` на своей машине** (не в Docker) прокси в `vite.config.ts` направляет `/api` на `127.0.0.1:8000`, а не на хост `backend` (он доступен только внутри docker-сети).
 
 ### Frontend не подключается к API
 
 - Проверьте, что backend отвечает: `curl http://localhost:8000/health`
-- В dev Vite проксирует `/api` на backend; проверьте `frontend/vite.config.ts` (proxy target).
+- В dev Vite проксирует `/api` на backend; по умолчанию target — `http://127.0.0.1:8000` (см. `frontend/vite.config.ts`). Для нестандартного адреса: `VITE_PROXY_TARGET=...`.
 
 ### Прогресс не сохраняется / «Network Error» при завершении уровня
 
@@ -148,6 +161,15 @@ botStory/
 | Администратор | Всё выше + создание уровней, модерация, новости |
 
 ---
+
+## Тесты
+
+| Где | Команда |
+|-----|---------|
+| Backend (рекомендуется Docker, Python 3.11 в образе) | `docker compose run --rm --no-deps backend pytest tests -v` |
+| Frontend | `cd frontend && npm install && npm run test` |
+
+Подробный отчёт по сценариям (12+ тестовых примеров) и расшифровка полей: [docs/converted-document.md](docs/converted-document.md).
 
 ## Документация
 

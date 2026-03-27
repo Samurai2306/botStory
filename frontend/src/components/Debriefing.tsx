@@ -9,15 +9,27 @@ interface Props {
     golden_steps_count?: number
   }
   goldenSteps?: number
+  /** Сравнение с эталоном и блок «эталонных шагов» */
+  compareToGolden?: boolean
   progressSaveError?: string | null
   onClose: () => void
   onRetry: () => void
 }
 
-export default function Debriefing({ levelId, result, goldenSteps, progressSaveError, onClose, onRetry }: Props) {
+export default function Debriefing({
+  levelId,
+  result,
+  goldenSteps,
+  compareToGolden = true,
+  progressSaveError,
+  onClose,
+  onRetry,
+}: Props) {
   const navigate = useNavigate()
 
-  const isOptimal = result.steps_count <= (goldenSteps || result.golden_steps_count || Infinity)
+  const isOptimal = compareToGolden
+    ? result.steps_count <= (goldenSteps || result.golden_steps_count || Infinity)
+    : Boolean(result.is_optimal)
 
   return (
     <div className="debriefing">
@@ -35,23 +47,30 @@ export default function Debriefing({ levelId, result, goldenSteps, progressSaveE
             <div className="stat-value">{result.steps_count} шагов</div>
           </div>
           
-          {goldenSteps && (
+          {compareToGolden && goldenSteps ? (
             <div className="result-stat">
               <div className="stat-label">Эталон</div>
               <div className="stat-value">{goldenSteps} шагов</div>
             </div>
-          )}
+          ) : null}
         </div>
-        
-        {isOptimal ? (
-          <div className="result-message success">
-            <h2>🎉 Отличная работа!</h2>
-            <p>Ваше решение оптимально!</p>
-          </div>
+
+        {compareToGolden ? (
+          isOptimal ? (
+            <div className="result-message success">
+              <h2>Отличная работа!</h2>
+              <p>Ваше решение оптимально!</p>
+            </div>
+          ) : (
+            <div className="result-message">
+              <h2>Можно лучше!</h2>
+              <p>Попробуйте найти более короткий путь</p>
+            </div>
+          )
         ) : (
-          <div className="result-message">
-            <h2>Можно лучше!</h2>
-            <p>Попробуйте найти более короткий путь</p>
+          <div className="result-message success">
+            <h2>Миссия засчитана</h2>
+            <p>Эталонные шаги скрыты в настройках профиля.</p>
           </div>
         )}
         

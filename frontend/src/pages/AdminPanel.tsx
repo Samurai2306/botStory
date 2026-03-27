@@ -19,12 +19,29 @@ interface NewsItem {
   updated_at: string
 }
 
-const CELL_TYPES = [
-  { value: 'empty', label: 'Пусто', short: '·' },
+const TILE_TYPES = [
+  { value: 'platform', label: 'Платформа', short: '▦' },
+  { value: 'void', label: 'Пустота', short: '⬚' },
+  { value: 'broken_floor', label: 'Сломанный пол', short: '⟡' },
+] as const
+
+const OBJECT_TYPES = [
+  { value: 'erase', label: 'Ластик (удалить объект)', short: '⌫' },
   { value: 'wall', label: 'Стена', short: '▣' },
-  { value: 'trap', label: 'Ловушка', short: '⚠' },
   { value: 'start', label: 'Старт', short: '▶' },
-  { value: 'finish', label: 'Финиш', short: '★' }
+  { value: 'finish', label: 'Финиш', short: '★' },
+  { value: 'smart_mine', label: 'Умная мина', short: '⛭' },
+  { value: 'lever', label: 'Переключатель шлюза', short: '⟠' },
+  { value: 'gate', label: 'Шлюз', short: '▥' },
+] as const
+
+const GATE_COLORS = [
+  { value: 'orange', label: 'Оранжевый' },
+  { value: 'blue', label: 'Синий' },
+  { value: 'purple', label: 'Фиолетовый' },
+  { value: 'green', label: 'Зелёный' },
+  { value: 'red', label: 'Красный' },
+  { value: 'yellow', label: 'Жёлтый' },
 ] as const
 
 const MIN_SIZE = 3
@@ -38,8 +55,48 @@ const PRESETS = [
   { w: 12, h: 10, label: '12×10' },
 ]
 
-function makeCells(width: number, height: number, fill: string = 'empty'): string[][] {
+function makeCells(width: number, height: number, fill: string = 'platform'): string[][] {
   return Array(height).fill(null).map(() => Array(width).fill(fill))
+}
+
+type MapObject = { type: string; x: number; y: number; color?: string; open?: boolean; on?: boolean }
+
+function normalizeMapData(md: any): { width: number; height: number; cells: string[][]; objects: MapObject[] } {
+  const width = Number(md?.width) || 5
+  const height = Number(md?.height) || 5
+  const rawCells: any[][] = Array.isArray(md?.cells) ? md.cells : makeCells(width, height, 'platform')
+  const rawObjects: any[] = Array.isArray(md?.objects) ? md.objects : []
+
+  // New format already
+  if (Array.isArray(md?.objects)) {
+    const cells = makeCells(width, height, 'platform')
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const v = (rawCells?.[y]?.[x] ?? 'platform').toString().toLowerCase()
+        cells[y][x] = (v === 'empty' ? 'platform' : v)
+      }
+    }
+    return { width, height, cells, objects: rawObjects as MapObject[] }
+  }
+
+  // Legacy: objects embedded in cells
+  const cells = makeCells(width, height, 'platform')
+  const objects: MapObject[] = []
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const v = (rawCells?.[y]?.[x] ?? 'empty').toString().toLowerCase()
+      if (v === 'wall' || v === 'start' || v === 'finish') {
+        objects.push({ type: v, x, y })
+        cells[y][x] = 'platform'
+      } else if (v === 'void' || v === 'broken_floor' || v === 'platform') {
+        cells[y][x] = v
+      } else {
+        // empty/trap/unknown -> platform
+        cells[y][x] = 'platform'
+      }
+    }
+  }
+  return { width, height, cells, objects }
 }
 
 /** Количество непустых строк в эталонном коде — используется как golden_steps_count */
@@ -58,7 +115,8 @@ const emptyLevelData = () => ({
   map_data: {
     width: 5,
     height: 5,
-    cells: makeCells(5, 5)
+    cells: makeCells(5, 5, 'platform'),
+    objects: [] as MapObject[],
   }
 })
 
@@ -67,7 +125,11 @@ const emptyNewsData = () => ({ title: '', content: '', is_published: false })
 export default function AdminPanel() {
   const [adminSection, setAdminSection] = useState<AdminSection>('levels')
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [selectedCellType, setSelectedCellType] = useState<string>('empty')
+  const [editMode, setEditMode] = useState<'tile' | 'object'>('tile')
+  const [selectedTileType, setSelectedTileType] = useState<string>('platform')
+  const [selectedObjectType, setSelectedObjectType] = useState<string>('wall')
+  const [selectedColor, setSelectedColor] = useState<string>('orange')
+  const [selectedGateOpen, setSelectedGateOpen] = useState<boolean>(false)
   const [levels, setLevels] = useState<LevelOption[]>([])
   const [editingLevelId, setEditingLevelId] = useState<number | null>(null)
   const [levelData, setLevelData] = useState(emptyLevelData())
@@ -94,10 +156,7 @@ export default function AdminPanel() {
     }
     levelAPI.getById(editingLevelId).then(res => {
       const l = res.data
-      const md = l.map_data || { width: 5, height: 5, cells: makeCells(5, 5) }
-      const cells = Array.isArray(md.cells) && md.cells.length
-        ? md.cells
-        : makeCells(md.width || 5, md.height || 5)
+      const md = normalizeMapData(l.map_data || { width: 5, height: 5, cells: makeCells(5, 5, 'platform'), objects: [] })
       setLevelData({
         title: l.title || '',
         description: l.description || '',
@@ -106,7 +165,7 @@ export default function AdminPanel() {
         difficulty: Math.min(5, Math.max(1, Number(l.difficulty) || 1)),
         golden_code: l.golden_code || '',
         golden_steps_count: l.golden_steps_count ?? 0,
-        map_data: { width: md.width || 5, height: md.height || 5, cells }
+        map_data: { width: md.width || 5, height: md.height || 5, cells: md.cells, objects: md.objects }
       })
     }).catch(() => setMessage({ type: 'error', text: 'Не удалось загрузить уровень' }))
   }, [editingLevelId])
@@ -185,12 +244,33 @@ export default function AdminPanel() {
     }
   }
 
-  const updateCell = useCallback((y: number, x: number, type: string) => {
+  const updateTile = useCallback((y: number, x: number, tile: string) => {
     setLevelData(prev => {
       const newCells = prev.map_data.cells.map((row, yi) =>
-        row.map((cell, xi) => (yi === y && xi === x ? type : cell))
+        row.map((cell, xi) => (yi === y && xi === x ? tile : cell))
       )
-      return { ...prev, map_data: { ...prev.map_data, cells: newCells } }
+      // if tile becomes void - remove objects at that cell
+      const objects = (prev.map_data.objects || []).filter(o => !(o.x === x && o.y === y))
+      return { ...prev, map_data: { ...prev.map_data, cells: newCells, objects: tile === 'void' ? objects : (prev.map_data.objects || []) } }
+    })
+  }, [])
+
+  const upsertObject = useCallback((x: number, y: number, obj: MapObject | null) => {
+    setLevelData(prev => {
+      let objects = [...(prev.map_data.objects || [])]
+      objects = objects.filter(o => !(o.x === x && o.y === y))
+
+      if (obj) {
+        // enforce single start/finish
+        if (obj.type === 'start') objects = objects.filter(o => o.type !== 'start')
+        if (obj.type === 'finish') objects = objects.filter(o => o.type !== 'finish')
+        objects.push(obj)
+      }
+
+      // objects require platform under them
+      const cells = prev.map_data.cells.map(r => [...r])
+      if (obj && cells?.[y]?.[x] === 'void') cells[y][x] = 'platform'
+      return { ...prev, map_data: { ...prev.map_data, cells, objects } }
     })
   }, [])
 
@@ -199,13 +279,14 @@ export default function AdminPanel() {
     const h = Math.min(MAX_SIZE, Math.max(MIN_SIZE, height))
     setLevelData(prev => {
       const cur = prev.map_data
-      const newCells = makeCells(w, h, 'empty')
+      const newCells = makeCells(w, h, 'platform')
       for (let y = 0; y < Math.min(h, cur.height); y++) {
         for (let x = 0; x < Math.min(w, cur.width); x++) {
           newCells[y][x] = cur.cells[y][x]
         }
       }
-      return { ...prev, map_data: { width: w, height: h, cells: newCells } }
+      const objects = (cur.objects || []).filter((o: MapObject) => o.x >= 0 && o.y >= 0 && o.x < w && o.y < h)
+      return { ...prev, map_data: { width: w, height: h, cells: newCells, objects } }
     })
   }, [])
 
@@ -213,9 +294,12 @@ export default function AdminPanel() {
     setLevelData(prev => {
       const { width, height, cells } = prev.map_data
       if (height >= MAX_SIZE) return prev
-      const newRow = Array(width).fill('empty')
+      const newRow = Array(width).fill('platform')
       const newCells = at === 'top' ? [newRow, ...cells] : [...cells, newRow]
-      return { ...prev, map_data: { width, height: height + 1, cells: newCells } }
+      const objects = (prev.map_data.objects || []).map((o: MapObject) =>
+        at === 'top' ? { ...o, y: o.y + 1 } : o
+      ).filter((o: MapObject) => o.y < height + 1)
+      return { ...prev, map_data: { width, height: height + 1, cells: newCells, objects } }
     })
   }, [])
 
@@ -225,11 +309,14 @@ export default function AdminPanel() {
       if (width >= MAX_SIZE) return prev
       const newCells = cells.map(row => {
         const r = [...row]
-        if (at === 'left') r.unshift('empty')
-        else r.push('empty')
+        if (at === 'left') r.unshift('platform')
+        else r.push('platform')
         return r
       })
-      return { ...prev, map_data: { width: width + 1, height, cells: newCells } }
+      const objects = (prev.map_data.objects || []).map((o: MapObject) =>
+        at === 'left' ? { ...o, x: o.x + 1 } : o
+      ).filter((o: MapObject) => o.x < width + 1)
+      return { ...prev, map_data: { width: width + 1, height, cells: newCells, objects } }
     })
   }, [])
 
@@ -238,7 +325,11 @@ export default function AdminPanel() {
       const { width, height, cells } = prev.map_data
       if (height <= MIN_SIZE) return prev
       const newCells = at === 'top' ? cells.slice(1) : cells.slice(0, -1)
-      return { ...prev, map_data: { width, height: height - 1, cells: newCells } }
+      const objects0 = prev.map_data.objects || []
+      const objects = at === 'top'
+        ? objects0.filter((o: MapObject) => o.y !== 0).map((o: MapObject) => ({ ...o, y: o.y - 1 }))
+        : objects0.filter((o: MapObject) => o.y < height - 1)
+      return { ...prev, map_data: { width, height: height - 1, cells: newCells, objects } }
     })
   }, [])
 
@@ -247,7 +338,11 @@ export default function AdminPanel() {
       const { width, height, cells } = prev.map_data
       if (width <= MIN_SIZE) return prev
       const newCells = cells.map(row => at === 'left' ? row.slice(1) : row.slice(0, -1))
-      return { ...prev, map_data: { width: width - 1, height, cells: newCells } }
+      const objects0 = prev.map_data.objects || []
+      const objects = at === 'left'
+        ? objects0.filter((o: MapObject) => o.x !== 0).map((o: MapObject) => ({ ...o, x: o.x - 1 }))
+        : objects0.filter((o: MapObject) => o.x < width - 1)
+      return { ...prev, map_data: { width: width - 1, height, cells: newCells, objects } }
     })
   }, [])
 
@@ -258,14 +353,18 @@ export default function AdminPanel() {
   const clearMap = useCallback(() => {
     setLevelData(prev => {
       const { width, height } = prev.map_data
-      return { ...prev, map_data: { width, height, cells: makeCells(width, height) } }
+      return { ...prev, map_data: { width, height, cells: makeCells(width, height, 'platform'), objects: [] } }
     })
   }, [])
 
   const fillWalls = useCallback(() => {
     setLevelData(prev => {
       const { width, height } = prev.map_data
-      return { ...prev, map_data: { width, height, cells: makeCells(width, height, 'wall') } }
+      const objects: MapObject[] = []
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) objects.push({ type: 'wall', x, y })
+      }
+      return { ...prev, map_data: { width, height, cells: makeCells(width, height, 'platform'), objects } }
     })
   }, [])
 
@@ -412,21 +511,88 @@ export default function AdminPanel() {
           <h2>Карта уровня</h2>
 
           <div className="map-toolbar">
-            <label className="map-toolbar-label">Тип клетки:</label>
-            <div className="map-type-select-wrap">
-              <select
-                value={selectedCellType}
-                onChange={(e) => setSelectedCellType(e.target.value)}
-                className="map-type-select"
-                aria-label="Выберите тип клетки"
+            <label className="map-toolbar-label">Режим:</label>
+            <div className="map-mode">
+              <button
+                type="button"
+                className={`map-mode-btn ${editMode === 'tile' ? 'active' : ''}`}
+                onClick={() => setEditMode('tile')}
               >
-                {CELL_TYPES.map(({ value, label }) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-              <span className="map-type-select-icon" aria-hidden>▼</span>
+                Тайлы
+              </button>
+              <button
+                type="button"
+                className={`map-mode-btn ${editMode === 'object' ? 'active' : ''}`}
+                onClick={() => setEditMode('object')}
+              >
+                Объекты
+              </button>
             </div>
-            <span className="map-toolbar-hint">Клик по клетке — установить выбранный тип</span>
+
+            {editMode === 'tile' ? (
+              <>
+                <label className="map-toolbar-label">Тайл:</label>
+                <div className="map-type-select-wrap">
+                  <select
+                    value={selectedTileType}
+                    onChange={(e) => setSelectedTileType(e.target.value)}
+                    className="map-type-select"
+                    aria-label="Выберите тайл"
+                  >
+                    {TILE_TYPES.map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                  <span className="map-type-select-icon" aria-hidden>▼</span>
+                </div>
+                <span className="map-toolbar-hint">Клик по клетке — установить тайл</span>
+              </>
+            ) : (
+              <>
+                <label className="map-toolbar-label">Объект:</label>
+                <div className="map-type-select-wrap">
+                  <select
+                    value={selectedObjectType}
+                    onChange={(e) => setSelectedObjectType(e.target.value)}
+                    className="map-type-select"
+                    aria-label="Выберите объект"
+                  >
+                    {OBJECT_TYPES.map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                  <span className="map-type-select-icon" aria-hidden>▼</span>
+                </div>
+                {(selectedObjectType === 'gate' || selectedObjectType === 'lever') && (
+                  <div className="map-object-options">
+                    <div className="map-type-select-wrap">
+                      <select
+                        value={selectedColor}
+                        onChange={(e) => setSelectedColor(e.target.value)}
+                        className="map-type-select"
+                        aria-label="Цвет"
+                      >
+                        {GATE_COLORS.map(({ value, label }) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                      <span className="map-type-select-icon" aria-hidden>▼</span>
+                    </div>
+                    {selectedObjectType === 'gate' && (
+                      <label className="map-toggle">
+                        <input
+                          type="checkbox"
+                          checked={selectedGateOpen}
+                          onChange={(e) => setSelectedGateOpen(e.target.checked)}
+                        />
+                        <span>Открыт</span>
+                      </label>
+                    )}
+                  </div>
+                )}
+                <span className="map-toolbar-hint">Клик по клетке — установить объект</span>
+              </>
+            )}
           </div>
 
           <div className="map-size-controls">
@@ -530,18 +696,47 @@ export default function AdminPanel() {
               <div className="map-editor">
                 {levelData.map_data.cells.map((row, y) => (
                   <div key={y} className="map-row">
-                    {row.map((cell, x) => (
+                    {row.map((cell, x) => {
+                      const objects: MapObject[] = (levelData.map_data.objects || [])
+                      const obj = objects.find(o => o.x === x && o.y === y)
+                      const tile = (cell || 'platform').toLowerCase()
+                      const tileMeta = TILE_TYPES.find(t => t.value === tile)
+                      const objMeta = obj ? OBJECT_TYPES.find(t => t.value === obj.type) : null
+                      const icon = objMeta?.short ?? tileMeta?.short ?? '▦'
+                      const label = objMeta?.label ?? tileMeta?.label ?? tile
+                      const klass = obj ? `map-cell--obj-${obj.type}` : `map-cell--${tile}`
+                      const title = `[${x},${y}] ${label}`
+                      return (
                       <button
                         key={x}
                         type="button"
-                        onClick={() => updateCell(y, x, selectedCellType)}
-                        className={`map-cell map-cell--${cell}`}
-                        title={`[${x},${y}] ${CELL_TYPES.find(t => t.value === cell)?.label ?? cell} — клик: ${CELL_TYPES.find(t => t.value === selectedCellType)?.label}`}
+                        onClick={() => {
+                          if (editMode === 'tile') {
+                            updateTile(y, x, selectedTileType)
+                            return
+                          }
+                          if (selectedObjectType === 'erase') {
+                            upsertObject(x, y, null)
+                            return
+                          }
+                          if (selectedObjectType === 'gate') {
+                            upsertObject(x, y, { type: 'gate', x, y, color: selectedColor, open: selectedGateOpen })
+                            return
+                          }
+                          if (selectedObjectType === 'lever') {
+                            upsertObject(x, y, { type: 'lever', x, y, color: selectedColor, on: false })
+                            return
+                          }
+                          upsertObject(x, y, { type: selectedObjectType, x, y })
+                        }}
+                        className={`map-cell ${klass}`}
+                        title={title}
                       >
-                        <span className="map-cell-icon">{CELL_TYPES.find(t => t.value === cell)?.short ?? '·'}</span>
-                        <span className="map-cell-label">{CELL_TYPES.find(t => t.value === cell)?.label ?? cell}</span>
+                        <span className="map-cell-icon">{icon}</span>
+                        <span className="map-cell-label">{label}</span>
                       </button>
-                    ))}
+                      )
+                    })}
                   </div>
                 ))}
               </div>

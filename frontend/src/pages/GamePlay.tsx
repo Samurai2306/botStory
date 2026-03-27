@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { levelAPI, executeAPI } from '../services/api'
 import IsometricCanvas from '../components/IsometricCanvas'
 import CodeEditor from '../components/CodeEditor'
-import Diary from '../components/Diary'
+import CodePanelTerminal from '../components/CodePanelTerminal'
 import LevelChat from '../components/LevelChat'
 import Debriefing from '../components/Debriefing'
+import { useAuthStore } from '../store/authStore'
+import { mergeProfilePreferences } from '../types/profile'
 import './GamePlay.css'
 
 const BODY_FULLSCREEN_CLASS = 'gameplay-fullscreen'
@@ -14,22 +16,28 @@ interface Level {
   id: number
   title: string
   map_data: any
+  narrative?: string
   golden_steps_count?: number
 }
 
 export default function GamePlay() {
+  const { user } = useAuthStore()
+  const compareToGolden =
+    mergeProfilePreferences(user?.profile_preferences).learning.show_golden_after_complete !== false
   const { id } = useParams()
   const navigate = useNavigate()
   const [level, setLevel] = useState<Level | null>(null)
   const [code, setCode] = useState('')
   const [robotHistory, setRobotHistory] = useState<any[]>([])
+  const [mineHistory, setMineHistory] = useState<any[]>([])
+  const [gatesHistory, setGatesHistory] = useState<any[]>([])
   const [isExecuting, setIsExecuting] = useState(false)
   const [executionResult, setExecutionResult] = useState<any>(null)
   const [showDebriefing, setShowDebriefing] = useState(false)
   const [progressSaveError, setProgressSaveError] = useState<string | null>(null)
-  const [sidebarTab, setSidebarTab] = useState<'diary' | 'chat'>('diary')
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [codePanelView, setCodePanelView] = useState<'terminal' | 'ide'>('terminal')
+  const [showChat, setShowChat] = useState(false)
 
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen(prev => {
@@ -64,6 +72,8 @@ export default function GamePlay() {
       
       setExecutionResult(result)
       setRobotHistory(result.history ?? [])
+      setMineHistory(result.mine_history ?? [])
+      setGatesHistory(result.gates_history ?? [])
       
       if (result.success && result.reached_finish) {
         setProgressSaveError(null)
@@ -96,7 +106,10 @@ export default function GamePlay() {
           setProgressSaveError(text + hint)
           console.error('Не удалось сохранить прогресс:', lastErr?.response?.data ?? lastErr)
         }
-        setTimeout(() => setShowDebriefing(true), 2000)
+        // Дождаться, пока анимация по истории доиграет, прежде чем показывать дебрифинг
+        const steps = Array.isArray(result.history) ? Math.max(0, result.history.length - 1) : 0
+        const animMs = Math.max(1800, Math.round(steps * 90)) // ~0.2 шага/кадр при 60fps => ~83ms/шаг; берём запас
+        setTimeout(() => setShowDebriefing(true), animMs)
       }
     } catch (error: any) {
       setExecutionResult({
@@ -113,6 +126,8 @@ export default function GamePlay() {
 
   const handleReset = () => {
     setRobotHistory([])
+    setMineHistory([])
+    setGatesHistory([])
     setExecutionResult(null)
     setShowDebriefing(false)
   }
@@ -133,7 +148,8 @@ export default function GamePlay() {
       <Debriefing
         levelId={level.id}
         result={executionResult}
-        goldenSteps={level.golden_steps_count}
+        goldenSteps={compareToGolden ? level.golden_steps_count : undefined}
+        compareToGolden={compareToGolden}
         progressSaveError={progressSaveError}
         onClose={() => navigate('/levels')}
         onRetry={() => { setShowDebriefing(false); setProgressSaveError(null) }}
@@ -148,19 +164,19 @@ export default function GamePlay() {
         <div className="gameplay-header-actions">
           <button
             type="button"
+            className="chat-btn"
+            onClick={() => setShowChat(true)}
+            title="Открыть чат уровня"
+          >
+            💬 Чат
+          </button>
+          <button
+            type="button"
             className="fullscreen-btn"
             onClick={toggleFullscreen}
             title={isFullscreen ? 'Выйти из полноэкранного режима' : 'Карта и код во весь экран'}
           >
             {isFullscreen ? '✕ Выйти' : '⛶ Во весь экран'}
-          </button>
-          <button
-            type="button"
-            className="sidebar-toggle-btn"
-            onClick={() => setSidebarCollapsed(c => !c)}
-            title={sidebarCollapsed ? 'Показать дневник и чат' : 'Свернуть панель'}
-          >
-            {sidebarCollapsed ? '◐ Панель' : '◑ Свернуть'}
           </button>
           <button onClick={() => navigate('/levels')} className="back-btn">
             ← К уровням
@@ -168,50 +184,57 @@ export default function GamePlay() {
         </div>
       </div>
       
-      <div className={`gameplay-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <div className="game-area">
+      <div className="gameplay-layout">
+        <div className="game-area game-area--two-col">
           <div className="game-area-section">
             <span className="game-area-label">Карта</span>
             <IsometricCanvas
               mapData={level.map_data}
               robotHistory={robotHistory}
+              mineHistory={mineHistory}
+              gatesHistory={gatesHistory}
             />
           </div>
           <div className="game-area-section">
             <span className="game-area-label">Код</span>
-            <CodeEditor
-              value={code}
-              onChange={setCode}
-              onExecute={handleExecute}
-              onReset={handleReset}
-              isExecuting={isExecuting}
-            />
+            {codePanelView === 'terminal' ? (
+              <CodePanelTerminal
+                onSwitchToIde={() => setCodePanelView('ide')}
+                onRun={handleExecute}
+                isExecuting={isExecuting}
+                narrative={level.narrative}
+                levelTitle={level.title}
+              />
+            ) : (
+              <CodeEditor
+                value={code}
+                onChange={setCode}
+                onExecute={handleExecute}
+                onReset={handleReset}
+                isExecuting={isExecuting}
+                onSwitchToTerminal={() => setCodePanelView('terminal')}
+              />
+            )}
           </div>
         </div>
-        
-        {!sidebarCollapsed && (
-          <div className="sidebar">
-            <div className="sidebar-tabs">
-              <button 
-                className={sidebarTab === 'diary' ? 'active' : ''}
-                onClick={() => setSidebarTab('diary')}
-              >
-                📖 Дневник
-              </button>
-              <button 
-                className={sidebarTab === 'chat' ? 'active' : ''}
-                onClick={() => setSidebarTab('chat')}
-              >
-                💬 Чат
+      </div>
+
+      {showChat && (
+        <div className="chat-modal" role="dialog" aria-modal="true">
+          <div className="chat-modal-backdrop" onClick={() => setShowChat(false)} />
+          <div className="chat-modal-card">
+            <div className="chat-modal-header">
+              <span className="chat-modal-title">Чат уровня</span>
+              <button type="button" className="chat-modal-close" onClick={() => setShowChat(false)} aria-label="Закрыть чат">
+                ✕
               </button>
             </div>
-            <div className="sidebar-content">
-              {sidebarTab === 'diary' && <Diary levelId={level.id} />}
-              {sidebarTab === 'chat' && <LevelChat levelId={level.id} />}
+            <div className="chat-modal-body">
+              <LevelChat levelId={level.id} />
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
       
       {executionResult && !executionResult.success && (
         <div className="error-panel">

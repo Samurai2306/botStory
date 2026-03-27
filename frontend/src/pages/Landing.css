@@ -347,6 +347,18 @@
   margin-left: 8px;
 }
 
+.landing-container .display-gamelink {
+  color: #00ff41;
+  font-weight: 600;
+  text-decoration: none;
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+  transition: color 0.2s, text-shadow 0.2s;
+}
+.landing-container .display-gamelink:hover {
+  color: #00ff88;
+  text-shadow: 0 0 15px rgba(0, 255, 136, 0.8);
+}
+
 .landing-container .display-cursor {
   display: inline-block;
   width: 8px;

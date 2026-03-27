@@ -87,3 +87,242 @@
   padding-top: 2rem;
   border-top: 1px solid var(--border-glass);
 }
+
+.profile-passport {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.profile-passport-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.profile-passport-id {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+}
+
+.profile-passport .profile-avatar {
+  margin: 0;
+  width: 88px;
+  height: 88px;
+  font-size: 2.25rem;
+}
+
+.profile-username {
+  margin: 0 0 0.5rem;
+}
+
+.profile-tagline {
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.profile-bio {
+  text-align: left;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  margin: 0 0 1rem;
+}
+
+.profile-bio-placeholder {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.profile-bio-placeholder a {
+  color: var(--accent);
+}
+
+.profile-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.profile-btn-copy {
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--primary);
+  background: rgba(139, 126, 216, 0.15);
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.profile-link-settings {
+  color: var(--accent);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.profile-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.profile-tabs button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-glass);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.profile-tabs button.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(139, 126, 216, 0.12);
+}
+
+.profile-hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+  text-align: left;
+}
+
+.profile-meta {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.profile-section-title {
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin: 1.5rem 0 0.75rem;
+  text-align: left;
+}
+
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  text-align: left;
+}
+
+.achievement-card {
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-glass);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.achievement-card.earned {
+  border-color: rgba(139, 126, 216, 0.45);
+}
+
+.achievement-card.locked {
+  opacity: 0.55;
+}
+
+.achievement-card h3 {
+  margin: 0.35rem 0;
+  font-size: 1rem;
+}
+
+.achievement-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.achievement-cat {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.achievement-date {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.title-equip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.title-equip-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.title-equip-row select {
+  min-width: 220px;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-glass);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-primary);
+}
+
+.profile-save-titles {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.profile-titles-msg {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+  text-align: left;
+}
+
+.title-lb-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.title-lb-list li {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(139, 126, 216, 0.12);
+}
+
+.title-lb-holder {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--accent);
+  margin-top: 0.25rem;
+}
+
+.profile-achievements .profile-card,
+.profile-titles .profile-card {
+  text-align: left;
+}

@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from app.db.database import get_db
 from app.db.models import User, UserRole
-from app.schemas.user import UserCreate, UserResponse, Token
+from app.schemas.user import UserCreate, UserResponse, Token, build_user_response
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.config import settings
 
@@ -40,8 +40,8 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    
-    return db_user
+
+    return build_user_response(db_user)
 
 
 @router.post("/login", response_model=Token)

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { mergeProfilePreferences } from '../types/profile'
 import { motion } from 'framer-motion'
 import './Layout.css'
 
@@ -19,8 +20,12 @@ export default function Layout() {
 
   const isActive = (path: string) => location.pathname === path
 
+  const reducedMotion = user
+    ? mergeProfilePreferences(user.profile_preferences).ui.reduced_motion
+    : false
+
   return (
-    <div className="layout">
+    <div className={`layout${reducedMotion ? ' layout--reduced-motion' : ''}`}>
       <motion.nav 
         className="navbar"
         initial={{ y: -100 }}
@@ -32,17 +37,21 @@ export default function Layout() {
         </div>
 
         {user && (
-          <motion.div 
+          <Link
+            to="/profile"
             className="nav-user"
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
+            onClick={() => setMenuOpen(false)}
           >
-            <div className="user-avatar">
+            <motion.div
+              className="user-avatar"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+            >
               {user.username.charAt(0).toUpperCase()}
-            </div>
+            </motion.div>
             <span className="user-name">{user.username}</span>
-          </motion.div>
+          </Link>
         )}
 
         <div className={`menu-toggle ${menuOpen ? 'active' : ''}`} onClick={() => setMenuOpen(!menuOpen)}>
@@ -65,11 +74,18 @@ export default function Layout() {
             ◉ МИССИИ
           </Link>
           <Link 
-            to="/profile" 
-            className={isActive('/profile') ? 'active' : ''}
+            to="/community" 
+            className={isActive('/community') ? 'active' : ''}
             onClick={() => setMenuOpen(false)}
           >
-            ◈ ПРОФИЛЬ
+            ◐ СООБЩЕСТВО
+          </Link>
+          <Link
+            to="/settings"
+            className={isActive('/settings') ? 'active' : ''}
+            onClick={() => setMenuOpen(false)}
+          >
+            ⚙ НАСТРОЙКИ
           </Link>
           {user?.role === 'admin' && (
             <Link 

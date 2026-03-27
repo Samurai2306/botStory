@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { messagesAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
+import { mergeProfilePreferences } from '../types/profile'
 import './LevelChat.css'
 
 interface Props {
@@ -43,9 +44,17 @@ export default function LevelChat({ levelId }: Props) {
     setError('')
     
     try {
+      const prefs = user ? mergeProfilePreferences(user.profile_preferences) : null
+      let content = newMessage.trim()
+      if (
+        prefs?.learning.chat_default_spoiler &&
+        !content.toLowerCase().includes('[spoiler]')
+      ) {
+        content = `[spoiler]${content}[/spoiler]`
+      }
       await messagesAPI.create({
         level_id: levelId,
-        content: newMessage
+        content,
       })
       
       setNewMessage('')
