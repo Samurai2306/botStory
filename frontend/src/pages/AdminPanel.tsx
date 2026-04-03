@@ -1,23 +1,17 @@
-import { useState, useCallback, useEffect } from 'react'
-import { levelAPI, newsAPI } from '../services/api'
+import { useState, useCallback, useEffect, type FormEvent } from 'react'
+import { levelAPI, newsAPI, updatesAPI, communityAPI } from '../services/api'
+import {
+  AdminSection,
+  LevelOption,
+  MapObject,
+  NewsItem,
+  UpdateEditorData,
+  UpdateItem,
+  UpdateLayoutBlock,
+  UpdateTimelineEvent,
+} from './adminPanel/types'
+import CustomSelect from '../components/ui/CustomSelect'
 import './AdminPanel.css'
-
-type AdminSection = 'levels' | 'news'
-
-interface LevelOption {
-  id: number
-  title: string
-  order: number
-}
-
-interface NewsItem {
-  id: number
-  title: string
-  content: string
-  is_published: boolean
-  created_at: string
-  updated_at: string
-}
 
 const TILE_TYPES = [
   { value: 'platform', label: 'Платформа', short: '▦' },
@@ -55,11 +49,19 @@ const PRESETS = [
   { w: 12, h: 10, label: '12×10' },
 ]
 
+const BROADCAST_THEME_OPTIONS = [
+  { value: 'general' as const, label: 'Объявление' },
+  { value: 'system' as const, label: 'Системное' },
+  { value: 'important_update' as const, label: 'Важное обновление' },
+  { value: 'maintenance' as const, label: 'Техработы' },
+  { value: 'community' as const, label: 'Сообщество' },
+]
+
+type BroadcastNotifyTheme = (typeof BROADCAST_THEME_OPTIONS)[number]['value']
+
 function makeCells(width: number, height: number, fill: string = 'platform'): string[][] {
   return Array(height).fill(null).map(() => Array(width).fill(fill))
 }
-
-type MapObject = { type: string; x: number; y: number; color?: string; open?: boolean; on?: boolean }
 
 function normalizeMapData(md: any): { width: number; height: number; cells: string[][]; objects: MapObject[] } {
   const width = Number(md?.width) || 5
@@ -121,6 +123,35 @@ const emptyLevelData = () => ({
 })
 
 const emptyNewsData = () => ({ title: '', content: '', is_published: false })
+const emptyUpdateData = (): UpdateEditorData => ({
+  title: '',
+  summary: '',
+  content: '',
+  topic: 'general',
+  status: 'draft',
+  is_published: false,
+  is_pinned: false,
+  timeline_events: [
+    {
+      date: new Date().toISOString(),
+      title: 'Новый этап',
+      description: 'Опишите, что изменилось и почему это важно.',
+      type: 'feature',
+    },
+  ],
+  theme_config: {
+    accent_color: '#8B7ED8',
+    secondary_color: '#B8A9E8',
+    background_gradient: 'linear-gradient(135deg,#151127,#211a3b,#151127)',
+    icon: '◉',
+    timeline_style: 'neon',
+    surface_pattern: '',
+  },
+  layout_blocks: [
+    { type: 'hero', title: 'Ключевая идея', content: 'Короткий акцент релиза', emphasized: true },
+    { type: 'timeline_slice', title: 'Ход внедрения', content: 'Связь с событиями таймлайна' },
+  ],
+})
 
 export default function AdminPanel() {
   const [adminSection, setAdminSection] = useState<AdminSection>('levels')
@@ -137,17 +168,115 @@ export default function AdminPanel() {
   const [newsList, setNewsList] = useState<NewsItem[]>([])
   const [editingNewsId, setEditingNewsId] = useState<number | null>(null)
   const [newsData, setNewsData] = useState(emptyNewsData())
+  const [updatesList, setUpdatesList] = useState<UpdateItem[]>([])
+  const [editingUpdateId, setEditingUpdateId] = useState<number | null>(null)
+  const [updateData, setUpdateData] = useState<UpdateEditorData>(emptyUpdateData())
+  const [broadcastTitle, setBroadcastTitle] = useState('')
+  const [broadcastBody, setBroadcastBody] = useState('')
+  const [broadcastTheme, setBroadcastTheme] = useState<BroadcastNotifyTheme>('general')
+  const [broadcastSending, setBroadcastSending] = useState(false)
 
   useEffect(() => {
-    levelAPI.getAll().then(res => setLevels(res.data || [])).catch(() => {})
+    levelAPI
+      .getAllAdmin({ include_inactive: true })
+      .then((res) => setLevels(res.data || []))
+      .catch((err) => {
+        const status = (err as any)?.response?.status
+        setMessage({
+          type: 'error',
+          text: status
+            ? `Не удалось загрузить уровни (HTTP ${status}). Проверьте доступ к API.`
+            : 'Не удалось загрузить уровни. Проверьте, что API доступен (VITE_API_URL/прокси).',
+        })
+      })
   }, [])
 
   useEffect(() => {
-    if (adminSection === 'news') {
-      newsAPI.getAll().then(res => setNewsList(res.data || [])).catch(() => {})
-    }
     setMessage(null)
+    if (adminSection === 'news') {
+      newsAPI
+        .getAll()
+        .then((res) => setNewsList(res.data || []))
+        .catch((err) => {
+          const status = (err as any)?.response?.status
+          setMessage({
+            type: 'error',
+            text: status ? `Не удалось загрузить новости (HTTP ${status}).` : 'Не удалось загрузить новости.',
+          })
+        })
+    }
+    if (adminSection === 'updates') {
+      updatesAPI
+        .getAll({ limit: 100 })
+        .then((res) => setUpdatesList(res.data || []))
+        .catch((err) => {
+          const status = (err as any)?.response?.status
+          setMessage({
+            type: 'error',
+            text: status ? `Не удалось загрузить обновления (HTTP ${status}).` : 'Не удалось загрузить обновления.',
+          })
+        })
+    }
   }, [adminSection])
+
+  const handleBroadcastSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    const title = broadcastTitle.trim()
+    if (!title) {
+      setMessage({ type: 'error', text: 'Укажите заголовок' })
+      return
+    }
+    if (!window.confirm('Отправить уведомление всем активным пользователям (кроме гостей)?')) return
+    setBroadcastSending(true)
+    try {
+      const res = await communityAPI.broadcastNotifications({
+        title,
+        body: broadcastBody.trim() || undefined,
+        theme: broadcastTheme,
+      })
+      const n = res.data?.recipients ?? 0
+      setMessage({ type: 'success', text: `Рассылка отправлена. Получателей: ${n}.` })
+      setBroadcastTitle('')
+      setBroadcastBody('')
+      setBroadcastTheme('general')
+    } catch (err: unknown) {
+      const ax = err as {
+        message?: string
+        code?: string
+        response?: { status?: number; statusText?: string; data?: { detail?: unknown; message?: string } }
+      }
+      const res = ax.response
+      const data = res?.data
+      let text: string | null = null
+      if (data && typeof data === 'object') {
+        const d = data.detail
+        if (typeof d === 'string') text = d
+        else if (Array.isArray(d) && d.length > 0) {
+          const first = d[0] as { msg?: string }
+          if (typeof first?.msg === 'string') text = first.msg
+        }
+        if (!text && typeof data.message === 'string' && data.message.length > 0) text = data.message
+      }
+      if (!text && res?.status === 404) {
+        text =
+          'Маршрут рассылки не найден на сервере. Обновите backend до версии с POST /community/notifications/broadcast и перезапустите контейнер.'
+      }
+      if (!text && res?.status === 401) text = 'Сессия истекла или токен недействителен — войдите снова.'
+      if (!text && res?.status === 403) text = 'Недостаточно прав (нужна роль admin в базе для этого токена).'
+      if (!text && res?.status != null) {
+        text = `Ответ сервера: ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`
+      }
+      if (!text && (ax.code === 'ERR_NETWORK' || ax.message === 'Network Error')) {
+        text =
+          'Сервер недоступен. Запустите backend. В Docker перезапустите frontend после docker-compose (прокси VITE_PROXY_TARGET→backend); локально: npm run dev и API на порту 8000, либо задайте VITE_API_URL.'
+      }
+      if (!text && ax.message) text = ax.message
+      if (!text) text = 'Не удалось отправить рассылку'
+      setMessage({ type: 'error', text })
+    } finally {
+      setBroadcastSending(false)
+    }
+  }
 
   useEffect(() => {
     if (editingLevelId == null) {
@@ -185,6 +314,35 @@ export default function AdminPanel() {
     }).catch(() => setMessage({ type: 'error', text: 'Не удалось загрузить новость' }))
   }, [adminSection, editingNewsId])
 
+  useEffect(() => {
+    if (adminSection !== 'updates' || editingUpdateId == null) {
+      setUpdateData(emptyUpdateData())
+      return
+    }
+    updatesAPI.getById(editingUpdateId).then(res => {
+      const u = res.data as UpdateItem
+      setUpdateData({
+        title: u.title || '',
+        summary: u.summary || '',
+        content: u.content || '',
+        topic: u.topic || 'general',
+        status: u.status || 'draft',
+        is_published: !!u.is_published,
+        is_pinned: !!u.is_pinned,
+        timeline_events: Array.isArray(u.timeline_events) && u.timeline_events.length ? u.timeline_events : emptyUpdateData().timeline_events,
+        theme_config: {
+          accent_color: u.theme_config?.accent_color || '#8B7ED8',
+          secondary_color: u.theme_config?.secondary_color || '#B8A9E8',
+          background_gradient: u.theme_config?.background_gradient || 'linear-gradient(135deg,#151127,#211a3b,#151127)',
+          icon: u.theme_config?.icon || '◉',
+          timeline_style: u.theme_config?.timeline_style || 'neon',
+          surface_pattern: u.theme_config?.surface_pattern || '',
+        },
+        layout_blocks: Array.isArray(u.layout_blocks) ? u.layout_blocks : [],
+      })
+    }).catch(() => setMessage({ type: 'error', text: 'Не удалось загрузить обновление' }))
+  }, [adminSection, editingUpdateId])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage(null)
@@ -200,7 +358,7 @@ export default function AdminPanel() {
         await levelAPI.create(payload)
         setMessage({ type: 'success', text: 'Уровень создан успешно!' })
         setLevelData(emptyLevelData())
-        levelAPI.getAll().then(res => setLevels(res.data || []))
+        levelAPI.getAllAdmin({ include_inactive: true }).then(res => setLevels(res.data || []))
       }
     } catch (error: any) {
       const d = error.response?.data?.detail
@@ -242,6 +400,89 @@ export default function AdminPanel() {
     } catch {
       setMessage({ type: 'error', text: 'Не удалось удалить новость' })
     }
+  }
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMessage(null)
+    try {
+      const payload = {
+        ...updateData,
+        status: updateData.is_published ? 'published' : updateData.status,
+      }
+      if (editingUpdateId != null) {
+        await updatesAPI.update(editingUpdateId, payload)
+        setMessage({ type: 'success', text: 'Обновление сохранено' })
+      } else {
+        await updatesAPI.create(payload)
+        setMessage({ type: 'success', text: 'Обновление создано' })
+        setUpdateData(emptyUpdateData())
+      }
+      updatesAPI.getAll({ limit: 100 }).then(res => setUpdatesList(res.data || []))
+    } catch {
+      setMessage({ type: 'error', text: 'Не удалось сохранить обновление' })
+    }
+  }
+
+  const handleUpdateDelete = async () => {
+    if (editingUpdateId == null) return
+    if (!window.confirm('Удалить это обновление?')) return
+    try {
+      await updatesAPI.delete(editingUpdateId)
+      setEditingUpdateId(null)
+      setUpdateData(emptyUpdateData())
+      setMessage({ type: 'success', text: 'Обновление удалено' })
+      updatesAPI.getAll({ limit: 100 }).then(res => setUpdatesList(res.data || []))
+    } catch {
+      setMessage({ type: 'error', text: 'Не удалось удалить обновление' })
+    }
+  }
+
+  const addTimelineEvent = () => {
+    setUpdateData(prev => ({
+      ...prev,
+      timeline_events: [...prev.timeline_events, {
+        date: new Date().toISOString(),
+        title: 'Новый этап',
+        description: '',
+        type: 'feature',
+      }],
+    }))
+  }
+
+  const updateTimelineEvent = (index: number, patch: Partial<UpdateTimelineEvent>) => {
+    setUpdateData(prev => ({
+      ...prev,
+      timeline_events: prev.timeline_events.map((evt, i) => (i === index ? { ...evt, ...patch } : evt)),
+    }))
+  }
+
+  const removeTimelineEvent = (index: number) => {
+    setUpdateData(prev => ({
+      ...prev,
+      timeline_events: prev.timeline_events.filter((_, i) => i !== index),
+    }))
+  }
+
+  const addLayoutBlock = () => {
+    setUpdateData(prev => ({
+      ...prev,
+      layout_blocks: [...prev.layout_blocks, { type: 'rich_text', title: 'Новый блок', content: '' }],
+    }))
+  }
+
+  const updateLayoutBlock = (index: number, patch: Partial<UpdateLayoutBlock>) => {
+    setUpdateData(prev => ({
+      ...prev,
+      layout_blocks: prev.layout_blocks.map((b, i) => (i === index ? { ...b, ...patch } : b)),
+    }))
+  }
+
+  const removeLayoutBlock = (index: number) => {
+    setUpdateData(prev => ({
+      ...prev,
+      layout_blocks: prev.layout_blocks.filter((_, i) => i !== index),
+    }))
   }
 
   const updateTile = useCallback((y: number, x: number, tile: string) => {
@@ -385,6 +626,20 @@ export default function AdminPanel() {
         >
           Новости
         </button>
+        <button
+          type="button"
+          className={`admin-tab ${adminSection === 'updates' ? 'active' : ''}`}
+          onClick={() => setAdminSection('updates')}
+        >
+          Обновления
+        </button>
+        <button
+          type="button"
+          className={`admin-tab ${adminSection === 'notify' ? 'active' : ''}`}
+          onClick={() => setAdminSection('notify')}
+        >
+          Уведомления
+        </button>
       </div>
 
       {adminSection === 'levels' && (
@@ -401,22 +656,16 @@ export default function AdminPanel() {
           <div className="form-group">
             <label>Уровень</label>
             <div className="level-select-wrap">
-              <select
-                value={editingLevelId ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value
-                  setEditingLevelId(v === '' ? null : parseInt(v, 10))
-                }}
+              <CustomSelect
                 className="level-select-edit"
-                aria-label="Выберите уровень для редактирования"
-              >
-                <option value="">— Новый уровень —</option>
-                {levels.map(l => (
-                  <option key={l.id} value={l.id}>
-                    #{l.order} {l.title}
-                  </option>
-                ))}
-              </select>
+                value={editingLevelId == null ? '' : String(editingLevelId)}
+                onChange={(v) => setEditingLevelId(v === '' ? null : parseInt(v, 10))}
+                ariaLabel="Выберите уровень для редактирования"
+                options={[
+                  { value: '', label: '— Новый уровень —' },
+                  ...levels.map((l) => ({ value: String(l.id), label: `#${l.order} ${l.title}` })),
+                ]}
+              />
             </div>
             <span className="form-hint">
               {editingLevelId != null ? 'Редактирование: измените поля и нажмите «Сохранить»' : 'Выберите уровень для редактирования или оставьте «Новый уровень» для создания'}
@@ -533,17 +782,13 @@ export default function AdminPanel() {
               <>
                 <label className="map-toolbar-label">Тайл:</label>
                 <div className="map-type-select-wrap">
-                  <select
-                    value={selectedTileType}
-                    onChange={(e) => setSelectedTileType(e.target.value)}
+                  <CustomSelect
                     className="map-type-select"
-                    aria-label="Выберите тайл"
-                  >
-                    {TILE_TYPES.map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                  <span className="map-type-select-icon" aria-hidden>▼</span>
+                    value={selectedTileType}
+                    onChange={setSelectedTileType}
+                    ariaLabel="Выберите тайл"
+                    options={TILE_TYPES.map(({ value, label }) => ({ value, label }))}
+                  />
                 </div>
                 <span className="map-toolbar-hint">Клик по клетке — установить тайл</span>
               </>
@@ -551,32 +796,24 @@ export default function AdminPanel() {
               <>
                 <label className="map-toolbar-label">Объект:</label>
                 <div className="map-type-select-wrap">
-                  <select
-                    value={selectedObjectType}
-                    onChange={(e) => setSelectedObjectType(e.target.value)}
+                  <CustomSelect
                     className="map-type-select"
-                    aria-label="Выберите объект"
-                  >
-                    {OBJECT_TYPES.map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                  <span className="map-type-select-icon" aria-hidden>▼</span>
+                    value={selectedObjectType}
+                    onChange={setSelectedObjectType}
+                    ariaLabel="Выберите объект"
+                    options={OBJECT_TYPES.map(({ value, label }) => ({ value, label }))}
+                  />
                 </div>
                 {(selectedObjectType === 'gate' || selectedObjectType === 'lever') && (
                   <div className="map-object-options">
                     <div className="map-type-select-wrap">
-                      <select
-                        value={selectedColor}
-                        onChange={(e) => setSelectedColor(e.target.value)}
+                      <CustomSelect
                         className="map-type-select"
-                        aria-label="Цвет"
-                      >
-                        {GATE_COLORS.map(({ value, label }) => (
-                          <option key={value} value={value}>{label}</option>
-                        ))}
-                      </select>
-                      <span className="map-type-select-icon" aria-hidden>▼</span>
+                        value={selectedColor}
+                        onChange={setSelectedColor}
+                        ariaLabel="Цвет"
+                        options={GATE_COLORS.map(({ value, label }) => ({ value, label }))}
+                      />
                     </div>
                     {selectedObjectType === 'gate' && (
                       <label className="map-toggle">
@@ -778,6 +1015,26 @@ export default function AdminPanel() {
         <button type="submit" className="submit-btn">
             {editingLevelId != null ? 'Сохранить изменения' : 'Создать уровень'}
           </button>
+          {editingLevelId != null && (
+            <button
+              type="button"
+              className="submit-btn admin-delete-btn"
+              onClick={async () => {
+                if (!window.confirm('Деактивировать уровень? Он будет скрыт из списка уровней.')) return
+                try {
+                  await levelAPI.delete(editingLevelId)
+                  setMessage({ type: 'success', text: 'Уровень деактивирован' })
+                  setEditingLevelId(null)
+                  setLevelData(emptyLevelData())
+                  levelAPI.getAllAdmin({ include_inactive: true }).then(res => setLevels(res.data || []))
+                } catch {
+                  setMessage({ type: 'error', text: 'Не удалось деактивировать уровень' })
+                }
+              }}
+            >
+              Деактивировать уровень
+            </button>
+          )}
         </form>
         </>
       )}
@@ -796,22 +1053,16 @@ export default function AdminPanel() {
               <div className="form-group">
                 <label>Новость</label>
                 <div className="level-select-wrap">
-                  <select
-                    value={editingNewsId ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      setEditingNewsId(v === '' ? null : parseInt(v, 10))
-                    }}
+                  <CustomSelect
                     className="level-select-edit"
-                    aria-label="Выберите новость для редактирования"
-                  >
-                    <option value="">— Новая новость —</option>
-                    {newsList.map(n => (
-                      <option key={n.id} value={n.id}>
-                        {n.is_published ? '✓' : '○'} {n.title}
-                      </option>
-                    ))}
-                  </select>
+                    value={editingNewsId == null ? '' : String(editingNewsId)}
+                    onChange={(v) => setEditingNewsId(v === '' ? null : parseInt(v, 10))}
+                    ariaLabel="Выберите новость для редактирования"
+                    options={[
+                      { value: '', label: '— Новая новость —' },
+                      ...newsList.map((n) => ({ value: String(n.id), label: `${n.is_published ? '✓' : '○'} ${n.title}` })),
+                    ]}
+                  />
                 </div>
                 <span className="form-hint">
                   {editingNewsId != null ? 'Редактирование: измените поля и нажмите «Сохранить»' : 'Выберите новость или оставьте «Новая новость» для создания'}
@@ -858,6 +1109,288 @@ export default function AdminPanel() {
                   Удалить новость
                 </button>
               )}
+            </div>
+          </form>
+        </>
+      )}
+
+      {adminSection === 'updates' && (
+        <>
+          <h1>Обновления и кастомизация таймлайна</h1>
+          {message && (
+            <div className={`admin-message ${message.type}`}>
+              {message.type === 'success' ? '✓' : '⚠'} {message.text}
+            </div>
+          )}
+          <form onSubmit={handleUpdateSubmit} className="level-form admin-updates-form">
+            <div className="form-section">
+              <h2>Режим</h2>
+              <div className="form-group">
+                <label>Запись обновления</label>
+                <div className="level-select-wrap">
+                  <CustomSelect
+                    className="level-select-edit"
+                    value={editingUpdateId == null ? '' : String(editingUpdateId)}
+                    onChange={(v) => setEditingUpdateId(v === '' ? null : parseInt(v, 10))}
+                    ariaLabel="Выберите обновление для редактирования"
+                    options={[
+                      { value: '', label: '— Новое обновление —' },
+                      ...updatesList.map((u) => ({ value: String(u.id), label: `${u.is_published ? '✓' : '○'} ${u.title}` })),
+                    ]}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-section">
+              <h2>Контент и публикация</h2>
+              <div className="form-group">
+                <label>Заголовок</label>
+                <input value={updateData.title} onChange={(e) => setUpdateData({ ...updateData, title: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label>Краткое описание</label>
+                <textarea value={updateData.summary} onChange={(e) => setUpdateData({ ...updateData, summary: e.target.value })} rows={2} />
+              </div>
+              <div className="form-group">
+                <label>Основной текст</label>
+                <textarea value={updateData.content} onChange={(e) => setUpdateData({ ...updateData, content: e.target.value })} rows={6} required />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Тематический тег</label>
+                  <input value={updateData.topic} onChange={(e) => setUpdateData({ ...updateData, topic: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Статус</label>
+                  <CustomSelect
+                    className="level-select-edit"
+                    value={updateData.status}
+                    onChange={(value) => setUpdateData({ ...updateData, status: value as UpdateEditorData['status'] })}
+                    options={[
+                      { value: 'draft', label: 'draft' },
+                      { value: 'published', label: 'published' },
+                      { value: 'archived', label: 'archived' },
+                    ]}
+                    ariaLabel="Статус обновления"
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="news-checkbox-label">
+                  <input type="checkbox" checked={updateData.is_published} onChange={(e) => setUpdateData({ ...updateData, is_published: e.target.checked })} />
+                  <span>Опубликовано (видно всем пользователям и гостям)</span>
+                </label>
+                <label className="news-checkbox-label">
+                  <input type="checkbox" checked={updateData.is_pinned} onChange={(e) => setUpdateData({ ...updateData, is_pinned: e.target.checked })} />
+                  <span>Закрепить вверху раздела</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="form-section">
+              <h2>Кастомизация интерфейса (theme_config)</h2>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Accent color</label>
+                  <input value={updateData.theme_config.accent_color} onChange={(e) => setUpdateData({ ...updateData, theme_config: { ...updateData.theme_config, accent_color: e.target.value } })} />
+                </div>
+                <div className="form-group">
+                  <label>Secondary color</label>
+                  <input value={updateData.theme_config.secondary_color} onChange={(e) => setUpdateData({ ...updateData, theme_config: { ...updateData.theme_config, secondary_color: e.target.value } })} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Background gradient</label>
+                <input value={updateData.theme_config.background_gradient} onChange={(e) => setUpdateData({ ...updateData, theme_config: { ...updateData.theme_config, background_gradient: e.target.value } })} />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Icon</label>
+                  <input value={updateData.theme_config.icon} onChange={(e) => setUpdateData({ ...updateData, theme_config: { ...updateData.theme_config, icon: e.target.value } })} />
+                </div>
+                <div className="form-group">
+                  <label>Timeline style</label>
+                  <CustomSelect
+                    className="level-select-edit"
+                    value={updateData.theme_config.timeline_style}
+                    onChange={(value) => setUpdateData({ ...updateData, theme_config: { ...updateData.theme_config, timeline_style: value as UpdateEditorData['theme_config']['timeline_style'] } })}
+                    options={[
+                      { value: 'neon', label: 'neon' },
+                      { value: 'glass', label: 'glass' },
+                      { value: 'minimal', label: 'minimal' },
+                      { value: 'retro', label: 'retro' },
+                    ]}
+                    ariaLabel="Стиль таймлайна"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-section">
+              <h2>Таймлайн события</h2>
+              {updateData.timeline_events.map((evt, idx) => (
+                <div key={idx} className="admin-update-block">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Дата</label>
+                      <input value={evt.date} onChange={(e) => updateTimelineEvent(idx, { date: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label>Тип</label>
+                      <CustomSelect
+                        className="level-select-edit"
+                        value={evt.type}
+                        onChange={(value) => updateTimelineEvent(idx, { type: value as UpdateTimelineEvent['type'] })}
+                        options={[
+                          { value: 'feature', label: 'feature' },
+                          { value: 'fix', label: 'fix' },
+                          { value: 'improvement', label: 'improvement' },
+                          { value: 'design', label: 'design' },
+                          { value: 'infra', label: 'infra' },
+                          { value: 'other', label: 'other' },
+                        ]}
+                        ariaLabel="Тип события"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Заголовок события</label>
+                    <input value={evt.title} onChange={(e) => updateTimelineEvent(idx, { title: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Описание события</label>
+                    <textarea rows={3} value={evt.description} onChange={(e) => updateTimelineEvent(idx, { description: e.target.value })} />
+                  </div>
+                  <button type="button" className="submit-btn admin-delete-btn" onClick={() => removeTimelineEvent(idx)}>Удалить событие</button>
+                </div>
+              ))}
+              <button type="button" className="submit-btn" onClick={addTimelineEvent}>+ Добавить событие</button>
+            </div>
+
+            <div className="form-section">
+              <h2>Конструктор layout_blocks</h2>
+              {updateData.layout_blocks.map((blk, idx) => (
+                <div key={idx} className="admin-update-block">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Тип блока</label>
+                      <CustomSelect
+                        className="level-select-edit"
+                        value={blk.type}
+                        onChange={(value) => updateLayoutBlock(idx, { type: value as UpdateLayoutBlock['type'] })}
+                        options={[
+                          { value: 'hero', label: 'hero' },
+                          { value: 'rich_text', label: 'rich_text' },
+                          { value: 'timeline_slice', label: 'timeline_slice' },
+                          { value: 'media', label: 'media' },
+                          { value: 'cta', label: 'cta' },
+                        ]}
+                        ariaLabel="Тип блока"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Заголовок</label>
+                      <input value={blk.title || ''} onChange={(e) => updateLayoutBlock(idx, { title: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Контент</label>
+                    <textarea rows={3} value={blk.content || ''} onChange={(e) => updateLayoutBlock(idx, { content: e.target.value })} />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Media URL</label>
+                      <input value={blk.media_url || ''} onChange={(e) => updateLayoutBlock(idx, { media_url: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label>CTA text</label>
+                      <input value={blk.cta_text || ''} onChange={(e) => updateLayoutBlock(idx, { cta_text: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>CTA URL</label>
+                    <input value={blk.cta_url || ''} onChange={(e) => updateLayoutBlock(idx, { cta_url: e.target.value })} />
+                  </div>
+                  <label className="news-checkbox-label">
+                    <input type="checkbox" checked={!!blk.emphasized} onChange={(e) => updateLayoutBlock(idx, { emphasized: e.target.checked })} />
+                    <span>Акцентный блок</span>
+                  </label>
+                  <button type="button" className="submit-btn admin-delete-btn" onClick={() => removeLayoutBlock(idx)}>Удалить блок</button>
+                </div>
+              ))}
+              <button type="button" className="submit-btn" onClick={addLayoutBlock}>+ Добавить блок</button>
+            </div>
+
+            <div className="admin-news-actions">
+              <button type="submit" className="submit-btn">
+                {editingUpdateId != null ? 'Сохранить обновление' : 'Создать обновление'}
+              </button>
+              {editingUpdateId != null && (
+                <button type="button" className="submit-btn admin-delete-btn" onClick={handleUpdateDelete}>
+                  Удалить обновление
+                </button>
+              )}
+            </div>
+          </form>
+        </>
+      )}
+
+      {adminSection === 'notify' && (
+        <>
+          <h1>Рассылка уведомлений</h1>
+          {message && (
+            <div className={`admin-message ${message.type}`}>
+              {message.type === 'success' ? '✓' : '⚠'} {message.text}
+            </div>
+          )}
+          <form onSubmit={handleBroadcastSubmit} className="level-form admin-notify-form">
+            <div className="form-section admin-notify-intro">
+              <p>
+                Сообщение попадёт в колокольчик у всех активных пользователей с ролью не «гость». Для важного текста
+                пользователи могут закрепить уведомление в окне списка.
+              </p>
+            </div>
+            <div className="form-section">
+              <h2>Текст</h2>
+              <div className="form-group">
+                <label>Тема уведомления</label>
+                <CustomSelect
+                  className="level-select-edit"
+                  value={broadcastTheme}
+                  onChange={(value) => setBroadcastTheme(value as BroadcastNotifyTheme)}
+                  disabled={broadcastSending}
+                  ariaLabel="Тема рассылки"
+                  options={BROADCAST_THEME_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                />
+                <span className="form-hint">Влияет на подпись типа в колокольчике и цвет акцента в списке.</span>
+              </div>
+              <div className="form-group">
+                <label>Заголовок (до 180 символов)</label>
+                <input
+                  type="text"
+                  value={broadcastTitle}
+                  onChange={(e) => setBroadcastTitle(e.target.value)}
+                  maxLength={180}
+                  required
+                  disabled={broadcastSending}
+                />
+              </div>
+              <div className="form-group">
+                <label>Текст (необязательно, до 500 символов)</label>
+                <textarea
+                  value={broadcastBody}
+                  onChange={(e) => setBroadcastBody(e.target.value)}
+                  rows={5}
+                  maxLength={500}
+                  disabled={broadcastSending}
+                />
+              </div>
+            </div>
+            <div className="admin-news-actions">
+              <button type="submit" className="submit-btn" disabled={broadcastSending}>
+                {broadcastSending ? 'Отправка…' : 'Разослать'}
+              </button>
             </div>
           </form>
         </>

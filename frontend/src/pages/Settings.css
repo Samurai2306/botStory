@@ -31,22 +31,29 @@
 }
 
 .settings-section h3 {
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 1rem 0;
   color: var(--accent);
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
 }
 
 .settings-select-wrapper {
-  position: relative;
   width: 100%;
+  margin: 0 0 0.85rem 0;
+}
+
+.settings-select-shell {
+  position: relative;
   border-radius: 12px;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(139, 126, 216, 0.7), rgba(96, 165, 250, 0.6));
-  box-shadow: 0 0 24px rgba(139, 126, 216, 0.25);
+  background: linear-gradient(135deg, rgba(139, 126, 216, 0.62), rgba(96, 165, 250, 0.45));
+  box-shadow: 0 0 12px rgba(139, 126, 216, 0.18);
 }
 
 .settings-select {
   width: 100%;
-  padding: 0.7rem 2.8rem 0.7rem 1.1rem;
+  min-height: 44px;
+  padding: 0.7rem 2.6rem 0.7rem 1rem;
   background: radial-gradient(circle at top left, rgba(139, 126, 216, 0.18), transparent 60%),
               radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.18), transparent 60%),
               rgba(3, 7, 18, 0.96);
@@ -62,20 +69,18 @@
   cursor: pointer;
 }
 
-.settings-select-wrapper::after {
-  content: '▾';
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: rgba(226, 232, 240, 0.85);
-  font-size: 0.85rem;
+.settings-select-shell::after {
+  display: none;
 }
 
-.settings-select:focus {
-  outline: none;
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9), 0 0 22px rgba(139, 126, 216, 0.9);
+.settings-select-shell .custom-select-trigger {
+  min-height: 44px;
+  border-radius: 11px;
+  border: none;
+}
+
+.settings-select-shell .custom-select-trigger:focus-visible {
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.95), 0 0 12px rgba(139, 126, 216, 0.5);
 }
 
 .settings-select option {
@@ -147,23 +152,101 @@
 
 .settings-check {
   display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-  margin-bottom: 0.65rem;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.55rem;
+  min-height: 42px;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  background: rgba(139, 126, 216, 0.05);
+  border: 1px solid rgba(139, 126, 216, 0.14);
   cursor: pointer;
   color: var(--text-secondary);
-  font-size: 0.92rem;
+  font-size: 0.98rem;
+  line-height: 1.35;
+  font-family: 'Rajdhani', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0.02em;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.settings-check:hover {
+  border-color: rgba(139, 126, 216, 0.3);
+  background: rgba(139, 126, 216, 0.08);
 }
 
 .settings-check input {
-  margin-top: 0.2rem;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: 0 0 20px;
+  position: relative;
+  border-radius: 5px;
+  border: 1px solid rgba(184, 169, 232, 0.55);
+  background: rgba(2, 6, 23, 0.92);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  display: grid;
+  place-items: center;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-check input::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 10px;
+  border-right: 2px solid rgba(3, 7, 18, 0.95);
+  border-bottom: 2px solid rgba(3, 7, 18, 0.95);
+  border-radius: 1px;
+  transform: translate(-50%, -58%) rotate(45deg) scale(0.7);
+  transform-origin: center;
+  opacity: 0;
+  background: transparent;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.settings-check input:checked {
+  border-color: rgba(178, 200, 255, 0.85);
+  background: linear-gradient(135deg, #cabaff, #7eb7ff);
+  box-shadow: 0 0 10px rgba(139, 126, 216, 0.45);
+}
+
+.settings-check input:checked::after {
+  transform: translate(-50%, -58%) rotate(45deg) scale(1);
+  opacity: 1;
+}
+
+.settings-check input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.settings-check:has(input:focus-visible) {
+  border-color: rgba(178, 200, 255, 0.6);
 }
 
 .settings-select-wrapper label {
   display: block;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.45rem;
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.86rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.settings-field input:focus,
+.settings-field textarea:focus {
+  border-color: rgba(178, 200, 255, 0.65);
+  box-shadow: 0 0 0 2px rgba(139, 126, 216, 0.22);
+}
+
+@media (max-width: 700px) {
+  .settings-check {
+    font-size: 0.92rem;
+  }
 }
 
 .settings-ok {
@@ -173,5 +256,91 @@
   background: rgba(74, 222, 128, 0.1);
   border-radius: 10px;
   color: #86efac;
+}
+
+.settings-avatar-preview {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 0.85rem;
+  margin: 0 0 1rem 0;
+}
+
+.settings-avatar-preview-current {
+  background: rgba(3, 7, 18, 0.9);
+  border: 1px solid rgba(139, 126, 216, 0.35);
+  border-radius: 12px;
+  padding: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.settings-avatar-preview-label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.settings-avatar-preview-img,
+.settings-avatar-preview-fallback {
+  width: 96px;
+  height: 96px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(139, 126, 216, 0.35);
+  background: rgba(9, 13, 30, 0.8);
+}
+
+.settings-avatar-preview-fallback {
+  color: var(--text-primary);
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 1px;
+}
+
+.settings-avatar-grid {
+  max-height: 220px;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 0.55rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(139, 126, 216, 0.25);
+  border-radius: 12px;
+  background: rgba(3, 7, 18, 0.6);
+}
+
+.settings-avatar-item {
+  background: rgba(9, 13, 30, 0.7);
+  border: 1px solid rgba(139, 126, 216, 0.25);
+  border-radius: 10px;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
+.settings-avatar-item img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+}
+
+.settings-avatar-item.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9), 0 0 16px rgba(139, 126, 216, 0.7);
+}
+
+@media (max-width: 700px) {
+  .settings {
+    padding: 1rem;
+  }
+
+  .settings-card {
+    padding: 1.25rem;
+  }
+
+  .settings-avatar-preview {
+    grid-template-columns: 1fr;
+  }
 }
 

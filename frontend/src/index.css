@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 
 @font-face {
   font-family: 'Minecraft';
@@ -18,6 +18,12 @@
   --tertiary: #9B8BC8;
   --warning: #fbbf24;
   --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.2);
+  --danger-border: rgba(248, 113, 113, 0.55);
+  --surface-hover: rgba(139, 126, 216, 0.12);
+  --surface-active: rgba(139, 126, 216, 0.2);
+  --surface-muted: rgba(255, 255, 255, 0.04);
+  --outline-strong: 3px solid rgba(184, 169, 232, 0.65);
   
   --bg-dark: #0a0a0f;
   --bg-darker: #050508;
@@ -34,6 +40,10 @@
   --shadow-lg: 0 20px 60px rgba(139, 126, 216, 0.25);
   --shadow-neon: 0 0 20px var(--primary-glow);
   --radius: 24px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
+  --tap-target-min: 44px;
+  --focus-ring: 2px solid var(--accent);
   --blur: blur(20px);
   
   font-family: 'Minecraft', 'Orbitron', monospace;
@@ -185,6 +195,17 @@ button:disabled {
   box-shadow: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Glass card (как на лендинге) */
 .glass-card {
   background: rgba(255, 255, 255, 0.06);
@@ -222,6 +243,162 @@ input:focus, textarea:focus, select:focus {
 input::placeholder, textarea::placeholder {
   color: var(--text-secondary);
   opacity: 0.6;
+}
+
+/* Unified select style across app pages */
+.ui-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.65rem 2.2rem 0.65rem 0.95rem;
+  border: 1px solid rgba(139, 126, 216, 0.45);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(139, 126, 216, 0.14), transparent 52%),
+    radial-gradient(circle at 90% 90%, rgba(74, 144, 226, 0.14), transparent 58%),
+    rgba(5, 9, 24, 0.94);
+  color: var(--text-primary);
+  font-family: 'Rajdhani', 'Inter', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.ui-select:hover {
+  border-color: rgba(184, 169, 232, 0.75);
+  background-color: rgba(9, 13, 30, 0.98);
+}
+
+.ui-select:focus-visible {
+  outline: none;
+  border-color: rgba(184, 169, 232, 0.95);
+  box-shadow: 0 0 0 2px rgba(139, 126, 216, 0.22);
+}
+
+.ui-select option {
+  background: #090b1b;
+  color: #ece7ff;
+}
+
+.ui-select-wrap {
+  position: relative;
+}
+
+.ui-select-wrap::after {
+  content: '▾';
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(236, 231, 255, 0.85);
+  pointer-events: none;
+  font-size: 0.75rem;
+}
+
+.custom-select {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select-trigger {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.65rem 2.2rem 0.65rem 0.95rem;
+  border: 1px solid rgba(139, 126, 216, 0.45);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(139, 126, 216, 0.14), transparent 52%),
+    radial-gradient(circle at 90% 90%, rgba(74, 144, 226, 0.14), transparent 58%),
+    rgba(5, 9, 24, 0.94);
+  color: var(--text-primary);
+  font-family: 'Rajdhani', 'Inter', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  text-transform: none;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.custom-select-trigger::before {
+  display: none;
+}
+
+.custom-select-trigger:hover {
+  border-color: rgba(184, 169, 232, 0.75);
+  background-color: rgba(9, 13, 30, 0.98);
+  color: var(--text-primary);
+  transform: none;
+}
+
+.custom-select-trigger:focus-visible {
+  outline: none;
+  border-color: rgba(184, 169, 232, 0.95);
+  box-shadow: 0 0 0 2px rgba(139, 126, 216, 0.22);
+}
+
+.custom-select-value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-select-arrow {
+  color: rgba(236, 231, 255, 0.85);
+  font-size: 0.75rem;
+}
+
+.custom-select-menu {
+  position: absolute;
+  z-index: 12000;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid rgba(139, 126, 216, 0.4);
+  border-radius: 12px;
+  background: rgba(6, 8, 20, 0.98);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  padding: 0.35rem;
+}
+
+.custom-select-option {
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: 'Rajdhani', 'Inter', sans-serif;
+  font-size: 0.98rem;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  box-shadow: none;
+}
+
+.custom-select-option::before {
+  display: none;
+}
+
+.custom-select-option:hover:not(:disabled) {
+  background: rgba(139, 126, 216, 0.16);
+  border-color: rgba(139, 126, 216, 0.35);
+  transform: none;
+}
+
+.custom-select-option.is-selected {
+  background: rgba(139, 126, 216, 0.22);
+  border-color: rgba(184, 169, 232, 0.5);
 }
 
 /* Scrollbar styling */

@@ -62,6 +62,7 @@ docker-compose exec backend python scripts/seed_data.py
 - **Не запускать** `create_admin.py` (старый скрипт) — используйте `create_admin_simple.py`: он не зависит от passlib и корректно работает с bcrypt.
 - **Не менять** порты в `docker-compose.yml` без необходимости — frontend ожидает backend на 8000 (через proxy в dev).
 - **Не хранить** секреты в репозитории — для production заведите `.env` и не коммитьте его (см. `docs/DEPLOYMENT.md`).
+- **SECRET_KEY обязателен**: backend запускается только с заданным ключом JWT (минимум 32 символа). При ротации ключа все ранее выданные токены станут невалидны и потребуется повторный вход.
 - **Не выполнять** `alembic downgrade` на production без бэкапа БД — возможна потеря данных.
 
 ---
@@ -90,6 +91,18 @@ docker-compose ps
 ```
 
 Убедитесь, что контейнер `postgres` в состоянии `Up`. Если БД пересоздавали — заново выполните миграции и скрипт создания админа.
+
+Если backend завершается сразу после старта, проверьте что в окружении задан `SECRET_KEY` (не короче 32 символов).
+Если в логах ошибка вида `SECRET_KEY uses a known insecure value`, значит используется запрещенное значение (например `your-secret-key-change-in-production`) — задайте новый случайный ключ длиной от 32 символов в `.env` и/или `docker-compose.yml`.
+
+### Сборка падает при `lookup registry-1.docker.io: no such host`
+
+Проблема не в коде проекта, а в сетевом доступе Docker до Docker Hub (DNS/прокси).
+
+- Проверьте DNS с хоста: `nslookup registry-1.docker.io`
+- Проверьте доступность образов: `docker pull node:18-alpine` и `docker pull python:3.11-slim`
+- Если нужно, настройте DNS в Docker Desktop (например `8.8.8.8`, `1.1.1.1`) и перезапустите Docker Desktop
+- В корпоративной сети при необходимости включите HTTPS proxy/VPN
 
 ### Ошибка «Incorrect email or password» / «trapped bcrypt»
 
@@ -123,6 +136,7 @@ docker-compose ps
 
 - Выполнен ли вход; не истёк ли JWT.
 - После перезапуска backend токен остаётся валидным, пока не истечёт срок (настройка в backend).
+- После смены `SECRET_KEY` ранее выданные токены автоматически перестают работать — выполните повторный вход.
 
 ### Ошибки при `npm install` (frontend)
 
@@ -181,6 +195,26 @@ botStory/
 | [docs/FEATURES.md](docs/FEATURES.md) | Реализованный функционал по модулям |
 | [docs/COMPETITOR_ANALYSIS.md](docs/COMPETITOR_ANALYSIS.md) | Анализ конкурентов (School 21, Алгоритмика и др.) |
 | [docs/SOFTWARE_USED.md](docs/SOFTWARE_USED.md) | Список ПО проекта (зачем и почему) |
+| [docs/AGENT_IMPLEMENTATION_WORKFLOW.md](docs/AGENT_IMPLEMENTATION_WORKFLOW.md) | Распределение задач improvement-плана между 4 агентами и правила интеграции |
+| [docs/IMPLEMENTATION_FULL_REPORT.md](docs/IMPLEMENTATION_FULL_REPORT.md) | Полный отчет по реализованным задачам, исправлениям и остаточным шагам |
+
+---
+
+## Новые улучшения (P2/P3)
+
+- `COMM-01/02/03`: в сообществе добавлены поток упоминаний, переходы по контексту из уведомлений, а также управление статусом опроса (закрыть/открыть) для автора/админа.
+- `ADMIN-01/02`: в админке есть деактивация уровня (soft-delete), а в чате уровня для admin добавлена модерация удаления сообщений.
+- `CHAT-01`: чат уровня получает автообновление (polling с более редким режимом на скрытой вкладке).
+- `GAME-01`: при запуске пустого кода показывается явная подсказка вместо «тихого» no-op.
+- `PWA-01/02/03/04`: добавлены `manifest.webmanifest`, базовый service worker App Shell, локальные draft'ы кода по уровню и офлайн-очередь отправки прогресса с автосинхронизацией при `online`.
+- `API-01`: унифицирована стратегия поиска пользователей через общий backend search helper; `community/users` помечен как deprecated-зеркало для совместимости.
+- `RT-01/RT-02`: добавлены realtime WebSocket-каналы для unread-count уведомлений и snapshot чата уровня (`/api/v1/realtime/.../ws`) с fallback на polling во фронте.
+- `ENG-01`: центр уведомлений получил фильтры (все/непрочитанные/важные) и bulk action "прочитать всё"; в настройках есть quiet mode/digest.
+- `PUSH-01`: реализован минимальный in-app browser push (Web Notification API при открытом приложении), включается в настройках.
+- `LEARN-01`: добавлен endpoint офлайн-пакета уровней (`/api/v1/levels/offline-package`) и кнопка предзагрузки в хабе уровней.
+- `GAM-01`: realtime-каналы позволяют показывать live-обновления достижений/титулов через поток уведомлений (при генерации системных событий backend).
+- `PERF-02`: в настройках добавлен `Performance mode` (минимум визуальных эффектов для слабых устройств).
+- `OBS-01`: backend возвращает `X-Request-Id` для каждого запроса; безопасный error envelope содержит `request_id`.
 
 ---
 

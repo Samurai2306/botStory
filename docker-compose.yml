@@ -32,7 +32,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: botstory_backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./backend:/app
     ports:
@@ -40,9 +40,11 @@ services:
     environment:
       DATABASE_URL: postgresql://botstory_user:botstory_pass@postgres:5432/botstory
       REDIS_URL: redis://redis:6379
-      SECRET_KEY: your-secret-key-change-in-production
+      SECRET_KEY: PEd/J9mfeF2MIXRnlJOr+U1xcYOOsr1mXm9RMres0trOYe4Az+W41UEqR9lx37YeTF/zSZkqzbPtuWmgNBdimw==
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      # Source for the "КОММИТЫ" section in the Community page
+      GITHUB_REPO: Samurai2306/botStory
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,7 +63,8 @@ services:
     ports:
       - "5173:5173"
     environment:
-      VITE_API_URL: http://localhost:8000
+      # Прокси Vite → сервис backend (из контейнера фронта localhost:8000 недоступен)
+      VITE_PROXY_TARGET: http://backend:8000
     depends_on:
       - backend
 

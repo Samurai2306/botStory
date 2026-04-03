@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -6,14 +6,15 @@ from app.db.database import get_db
 from app.db.models import News, User
 from app.schemas.news import NewsCreate, NewsUpdate, NewsResponse
 from app.core.deps import get_current_admin, get_optional_user
+from app.core.config import settings
 
 router = APIRouter()
 
 
 @router.get("/", response_model=List[NewsResponse])
 async def list_news(
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=settings.PAGINATION_MAX_LIMIT_GENERAL),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user)
 ):

@@ -28,7 +28,10 @@ class User(Base):
     terminal_theme = Column(String(20), nullable=False, server_default="linux")
     bio = Column(Text, nullable=True)
     tagline = Column(String(120), nullable=True)
+    avatar_key = Column(String(120), nullable=True)
     profile_preferences = Column(JSON, nullable=True)
+    reputation_score = Column(Integer, nullable=False, default=0, server_default="0")
+    notification_inbox_last_purge_at = Column(DateTime, nullable=True)
 
     # Relationships
     level_progress = relationship("LevelProgress", back_populates="user", cascade="all, delete-orphan")
@@ -46,6 +49,15 @@ class User(Base):
     post_likes = relationship("CommunityPostLike", back_populates="user", cascade="all, delete-orphan")
     community_polls = relationship("CommunityPoll", back_populates="author", cascade="all, delete-orphan")
     poll_votes = relationship("CommunityPollVote", back_populates="user", cascade="all, delete-orphan")
+    community_updates = relationship("CommunityUpdate", back_populates="author", cascade="all, delete-orphan")
+    mentions_received = relationship("CommunityMention", back_populates="target_user", foreign_keys="CommunityMention.target_user_id", cascade="all, delete-orphan")
+    mentions_made = relationship("CommunityMention", back_populates="author_user", foreign_keys="CommunityMention.author_user_id", cascade="all, delete-orphan")
+    notifications = relationship("UserNotification", back_populates="user", cascade="all, delete-orphan")
+    bookmarked_posts = relationship("CommunityPostBookmark", back_populates="user", cascade="all, delete-orphan")
+    category_subscriptions = relationship("CommunityCategorySubscription", back_populates="user", cascade="all, delete-orphan")
+    reputation_events = relationship("CommunityReputationEvent", back_populates="user", cascade="all, delete-orphan")
+    friend_links_as_a = relationship("UserFriendship", back_populates="user_a", foreign_keys="UserFriendship.user_a_id", cascade="all, delete-orphan")
+    friend_links_as_b = relationship("UserFriendship", back_populates="user_b", foreign_keys="UserFriendship.user_b_id", cascade="all, delete-orphan")
 
 
 class Level(Base):
@@ -290,6 +302,148 @@ class CommunityPollVote(Base):
     user = relationship("User", back_populates="poll_votes")
     poll = relationship("CommunityPoll", back_populates="votes")
     option = relationship("CommunityPollOption", back_populates="votes")
+
+
+class CommunityMentionTargetType(str, enum.Enum):
+    POST = "post"
+    COMMENT = "comment"
+
+
+class CommunityMention(Base):
+    __tablename__ = "community_mentions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    target_type = Column(Enum(CommunityMentionTargetType), nullable=False)
+    target_id = Column(Integer, nullable=False)
+    target_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    author_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    is_read = Column(Boolean, nullable=False, default=False, server_default="false")
+
+    target_user = relationship("User", back_populates="mentions_received", foreign_keys=[target_user_id])
+    author_user = relationship("User", back_populates="mentions_made", foreign_keys=[author_user_id])
+
+
+class UserNotificationType(str, enum.Enum):
+    MENTION = "mention"
+    COMMENT_REPLY = "comment_reply"
+    POLL_RESULT = "poll_result"
+    UPDATE = "update"
+    # Рассылки из админки (тема → отдельный type для списка уведомлений)
+    SYSTEM = "system"
+    IMPORTANT_UPDATE = "important_update"
+    MAINTENANCE = "maintenance"
+    COMMUNITY = "community"
+    GENERAL = "general"
+
+
+class UserNotification(Base):
+    __tablename__ = "user_notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    type = Column(
+        Enum(UserNotificationType, native_enum=False, length=30),
+        nullable=False,
+        default=UserNotificationType.UPDATE,
+    )
+    title = Column(String(180), nullable=False)
+    body = Column(String(500), nullable=True)
+    payload = Column(JSON, nullable=True)
+    is_read = Column(Boolean, nullable=False, default=False, server_default="false")
+    is_pinned = Column(Boolean, nullable=False, default=False, server_default="false")
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="notifications")
+
+
+class CommunityPostBookmark(Base):
+    __tablename__ = "community_post_bookmarks"
+    __table_args__ = (UniqueConstraint("user_id", "post_id", name="uq_post_bookmark_user_post"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    post_id = Column(Integer, ForeignKey("community_posts.id"), nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="bookmarked_posts")
+    post = relationship("CommunityPost")
+
+
+class CommunityCategorySubscription(Base):
+    __tablename__ = "community_category_subscriptions"
+    __table_args__ = (UniqueConstraint("user_id", "category", name="uq_category_subscription_user_category"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    category = Column(Enum(PostCategory), nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="category_subscriptions")
+
+
+class CommunityReputationReason(str, enum.Enum):
+    POST_CREATED = "post_created"
+    COMMENT_CREATED = "comment_created"
+    POST_LIKED = "post_liked"
+
+
+class CommunityReputationEvent(Base):
+    __tablename__ = "community_reputation_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    reason = Column(Enum(CommunityReputationReason), nullable=False)
+    points = Column(Integer, nullable=False)
+    source_type = Column(String(30), nullable=True)
+    source_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="reputation_events")
+
+
+class UserFriendship(Base):
+    __tablename__ = "user_friendships"
+    __table_args__ = (UniqueConstraint("user_a_id", "user_b_id", name="uq_user_friendship_pair"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_a_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_b_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+
+    user_a = relationship("User", back_populates="friend_links_as_a", foreign_keys=[user_a_id])
+    user_b = relationship("User", back_populates="friend_links_as_b", foreign_keys=[user_b_id])
+
+
+class UpdateStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PUBLISHED = "published"
+    ARCHIVED = "archived"
+
+
+class CommunityUpdate(Base):
+    __tablename__ = "community_updates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(180), nullable=False)
+    summary = Column(String(420), nullable=True)
+    content = Column(Text, nullable=False)
+    topic = Column(String(60), nullable=False, default="general", server_default="general")
+    status = Column(Enum(UpdateStatus), nullable=False, default=UpdateStatus.DRAFT, server_default="draft")
+    is_published = Column(Boolean, nullable=False, default=False, server_default="false")
+    is_pinned = Column(Boolean, nullable=False, default=False, server_default="false")
+    published_at = Column(DateTime, nullable=True)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # Advanced customization payloads for timeline rendering
+    timeline_events = Column(JSON, nullable=False, default=list, server_default="[]")
+    theme_config = Column(JSON, nullable=False, default=dict, server_default="{}")
+    layout_blocks = Column(JSON, nullable=False, default=list, server_default="[]")
+
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    author = relationship("User", back_populates="community_updates")
 
 
 # --- Achievements & titles ---

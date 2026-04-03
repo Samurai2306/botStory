@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useEffect, useState } from 'react'
-import { newsAPI } from '../services/api'
-import { motion } from 'framer-motion'
+import { newsAPI, updatesAPI } from '../services/api'
 import './Landing.css'
 
 const MARQUEE_TAGS = [
@@ -13,10 +12,36 @@ const MARQUEE_TAGS = [
 
 export default function Landing() {
   const { isAuthenticated } = useAuthStore()
-  const [news, setNews] = useState<any[]>([])
+  const [news, setNews] = useState<any[] | null>(null)
+  const [latestUpdate, setLatestUpdate] = useState<any | null | undefined>(undefined)
 
   useEffect(() => {
-    newsAPI.getAll().then(res => setNews(res.data)).catch(() => {})
+    let cancelled = false
+    const idleRunner = (cb: () => void) => {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        ;(window as any).requestIdleCallback(cb, { timeout: 1500 })
+      } else {
+        globalThis.setTimeout(cb, 250)
+      }
+    }
+
+    idleRunner(() => {
+      if (cancelled) return
+      newsAPI.getAll().then(res => {
+        if (!cancelled) setNews(Array.isArray(res.data) ? res.data : [])
+      }).catch(() => {
+        if (!cancelled) setNews([])
+      })
+      updatesAPI.getLatest().then(res => {
+        if (!cancelled) setLatestUpdate(res.data || null)
+      }).catch(() => {
+        if (!cancelled) setLatestUpdate(null)
+      })
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (
@@ -26,46 +51,25 @@ export default function Landing() {
       <div className="landing-bg-orb landing-bg-orb-2" aria-hidden />
 
       <section className="hero">
-        <motion.div
+        <div
           className="hero-content"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
         >
-          <motion.div
+          <div
             className="hero-badge"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
           >
             NEXT-GEN EDUCATION
-          </motion.div>
+          </div>
 
-          <motion.h1
-            className="hero-title"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-          >
+          <h1 className="hero-title">
             <span className="hero-title-line">LEGEND OF</span>
             <span className="hero-title-accent">B.O.T.</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            className="hero-subtitle"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.35 }}
-          >
+          <p className="hero-subtitle">
             Изучай программирование в киберпространстве будущего. Решай задачи, управляй B.O.T. и становись мастером кода.
-          </motion.p>
+          </p>
 
-          <motion.div
-            className="hero-stats"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2 }}
-          >
+          <div className="hero-stats">
             <div className="stat-item">
               <div className="stat-value">∞</div>
               <div className="stat-label">Возможностей</div>
@@ -78,14 +82,9 @@ export default function Landing() {
               <div className="stat-value">0+</div>
               <div className="stat-label">лет</div>
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="hero-buttons"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.4 }}
-          >
+          <div className="hero-buttons">
             {isAuthenticated ? (
               <Link to="/levels" className="glass-btn glass-btn-primary">
                 ▶ НАЧАТЬ МИССИЮ
@@ -100,25 +99,15 @@ export default function Landing() {
                 </Link>
               </>
             )}
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="scroll-indicator"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.8 }}
-          >
+          <div className="scroll-indicator">
             <div className="scroll-line" />
             <div className="scroll-text">SCROLL</div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
 
-        <motion.div
-          className="hero-visual"
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.6, duration: 0.7 }}
-        >
+        <div className="hero-visual">
           <div className="display-container">
             <div className="display-screen">
               <div className="display-header">
@@ -165,7 +154,7 @@ export default function Landing() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       <section className="marquee-section">
@@ -180,14 +169,9 @@ export default function Landing() {
       </section>
 
       <section id="features" className="features">
-        <motion.h2
-          className="section-title"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
+        <h2 className="section-title">
           СИСТЕМНЫЕ ВОЗМОЖНОСТИ НА ДАННЫЙ МОМЕНТ
-        </motion.h2>
+        </h2>
         <div className="features-grid">
           {[
             { icon: '⚡', title: 'ИГРОВОЙ ДВИЖОК', desc: 'Решай задачи, управляя B.O.T. на изометрической карте в реальном времени' },
@@ -197,61 +181,78 @@ export default function Landing() {
             { icon: '💬', title: 'СОЦИАЛЬНАЯ СЕТЬ', desc: 'Обсуждай решения с другими игроками в чатах уровней' },
             { icon: '🎯', title: 'СИСТЕМА ПРОГРЕССА', desc: 'Отслеживай достижения, получай статистику и улучшай навыки' },
           ].map((feature, i) => (
-            <motion.div
-              key={i}
-              className="feature-card"
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-            >
+            <div key={i} className="feature-card">
               <div className="feature-icon">{feature.icon}</div>
               <h3 className="feature-title">{feature.title}</h3>
               <p className="feature-desc">{feature.desc}</p>
               <div className="feature-line" />
-            </motion.div>
+            </div>
           ))}
         </div>
       </section>
 
-      {news.length > 0 && (
-        <section className="news-section">
-          <motion.h2
-            className="section-title"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-          >
-            ТРАНСЛЯЦИИ СИСТЕМЫ
-          </motion.h2>
-          <div className="news-grid">
-            {news.map((item, i) => (
-              <motion.div
-                key={item.id}
-                className="news-card"
-                initial={{ opacity: 0, x: i % 2 === 0 ? -30 : 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
-              >
-                <div className="news-header">
-                  <span className="news-badge">НОВОСТЬ</span>
-                  <span className="news-date">{new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
+      <section className="news-section">
+        {Array.isArray(news) && news.length > 0 && (
+          <>
+            <h2 className="section-title">
+              ТРАНСЛЯЦИИ СИСТЕМЫ
+            </h2>
+            <div className="news-grid">
+              {news.map((item) => (
+                <div key={item.id} className="news-card">
+                  <div className="news-header">
+                    <span className="news-badge">НОВОСТЬ</span>
+                    <span className="news-date">{new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
+                  </div>
+                  <h3 className="news-title">{item.title}</h3>
+                  <p className="news-content">{item.content}</p>
                 </div>
-                <h3 className="news-title">{item.title}</h3>
-                <p className="news-content">{item.content}</p>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-      )}
+              ))}
+            </div>
+          </>
+        )}
+      </section>
 
-      <motion.section
-        className="cta-section"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-      >
+      <section className="updates-preview-section">
+        {latestUpdate !== undefined && latestUpdate && (
+          <>
+            <h2 className="section-title">
+              ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ
+            </h2>
+            <article
+              className="landing-update-card"
+              style={{
+                ['--upd-accent' as any]: latestUpdate.theme_config?.accent_color || '#8B7ED8',
+                ['--upd-secondary' as any]: latestUpdate.theme_config?.secondary_color || '#B8A9E8',
+                ['--upd-bg' as any]: latestUpdate.theme_config?.background_gradient || 'linear-gradient(135deg, rgba(139,126,216,0.16), rgba(11,11,20,0.85))',
+              }}
+            >
+              <header className="landing-update-head">
+                <span className="landing-update-icon">{latestUpdate.theme_config?.icon || '◉'}</span>
+                <div>
+                  <h3>{latestUpdate.title}</h3>
+                  <p>{new Date(latestUpdate.published_at || latestUpdate.created_at).toLocaleString('ru-RU')}</p>
+                </div>
+              </header>
+              {latestUpdate.summary && <p className="landing-update-summary">{latestUpdate.summary}</p>}
+              <div className="landing-update-mini-timeline">
+                {(latestUpdate.timeline_events || []).slice(0, 3).map((evt: any, idx: number) => (
+                  <div className="landing-update-mini-row" key={`${latestUpdate.id}-${idx}`}>
+                    <span className="dot" />
+                    <div>
+                      <strong>{evt.title}</strong>
+                      <p>{evt.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Link to="/community" className="landing-update-link">Открыть все обновления в сообществе →</Link>
+            </article>
+          </>
+        )}
+      </section>
+
+      <section className="cta-section">
         <div className="cta-content">
           <h2 className="cta-title">ГОТОВ НАЧАТЬ?</h2>
           <p className="cta-text">
@@ -263,7 +264,7 @@ export default function Landing() {
             </Link>
           )}
         </div>
-      </motion.section>
+      </section>
 
       <footer className="landing-footer">
         <div className="footer-content">

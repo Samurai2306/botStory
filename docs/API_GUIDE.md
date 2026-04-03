@@ -12,6 +12,23 @@ http://localhost:8000/api/v1
 
 ---
 
+## Единый формат ошибок
+
+Для ошибок API используется единый безопасный контракт:
+
+```json
+{
+  "error_code": "BAD_REQUEST",
+  "message": "Human-readable safe message",
+  "request_id": "9cdb6f7b-...",
+  "detail": "Human-readable safe message"
+}
+```
+
+`request_id` также дублируется в заголовке `X-Request-Id` и используется для трассировки в логах.
+
+---
+
 ## Аутентификация
 
 Защищённые эндпоинты требуют JWT в заголовке:
@@ -21,6 +38,7 @@ Authorization: Bearer <access_token>
 ```
 
 Токен выдаётся при успешном `POST /auth/login`. Срок жизни задаётся в `settings.ACCESS_TOKEN_EXPIRE_MINUTES`.
+`SECRET_KEY` обязателен и должен быть достаточно длинным/случайным (минимум 32 символа), иначе backend не стартует.
 
 **Почему JWT:** единый токен для SPA без сессий на сервере; фронт хранит токен и передаёт его с каждым запросом. Роль пользователя зашита в payload токена и используется для проверки прав (admin/user).
 
@@ -81,7 +99,7 @@ password=password123
 }
 ```
 
-**Ошибки:** `401` — "Incorrect email or password"; `403` — "User account is inactive".
+**Ошибки:** `401` — неверные учетные данные; `403` — неактивный аккаунт; `429` — временное ограничение из-за слишком частых неудачных попыток.
 
 **Почему так:** OAuth2-совместимый поток; фронт отправляет форму, получает токен и дальше подставляет его в `Authorization: Bearer ...`. Поиск по email, а не по username, чтобы входить одним уникальным идентификатором.
 
@@ -155,7 +173,7 @@ password=password123
 
 Список всех пользователей. Зависимость `get_current_admin`.
 
-**Query:** `skip` (default 0), `limit` (default 100).
+**Query:** `skip` (default 0), `limit` (default 20, max 100).
 
 **Response:** `200 OK`, массив `UserResponse`.
 
@@ -171,11 +189,14 @@ password=password123
 
 Список **активных** уровней. Авторизация опциональна (`get_optional_user`): без токена тоже можно получить список (для лендинга/превью).
 
-**Query:** `skip`, `limit` (default 100). Уровни сортируются по полю `order`.
+**Query:** `skip`, `limit` (default 20, max 100), `include_inactive` (bool, default `false`).
+
+- Для обычных пользователей всегда возвращаются только активные уровни.
+- Для admin `include_inactive=true` позволяет получить также деактивированные уровни (для админ-панели).
 
 **Response:** `200 OK`, массив `LevelResponse` (id, title, description, narrative, order, difficulty, map_data, is_active, created_at).
 
-**Почему так:** неактивные уровни (soft delete) не отдаются; порядок явно задаётся полем `order` в админке.
+**Почему так:** неактивные уровни (soft delete) скрыты для игроков, но доступны admin для управления контентом без потери связанного прогресса.
 
 ---
 
@@ -229,7 +250,7 @@ password=password123
 
 ### POST `/levels/{level_id}/progress`
 
-Отправка решения уровня. Создаёт или обновляет запись прогресса: сохраняет код, число шагов, помечает уровень как пройденный, обновляет best_steps_count при улучшении.
+Отправка решения уровня. Сервер сам повторно выполняет `user_code` через исполнитель и проверяет достижимость финиша и реальное число шагов. Только после успешной валидации создаёт/обновляет прогресс.
 
 **Request (JSON):**
 ```json
@@ -242,7 +263,7 @@ password=password123
 
 **Response:** `200 OK`, `LevelProgressResponse`.
 
-**Почему так:** сервер не перепроверяет код через исполнитель; доверяем клиенту (исполнитель уже вызван на фронте через `/execute`). Сервер только фиксирует факт прохождения и метрики.
+**Почему так:** сервер является источником правды для прохождения уровня; клиентские поля `completed/steps_count` не считаются доверенными.
 
 ---
 
@@ -276,7 +297,7 @@ password=password123
 }
 ```
 
-При ошибке выполнения (например, столкновение со стеной): `400 Bad Request`, в `detail` — текст ошибки от `KumirExecutor`. Поля `is_optimal` и `golden_steps_count` заполняются только при успешном достижении финиша, для сравнения с эталоном.
+При ошибке выполнения (например, столкновение со стеной): `400 Bad Request` с безопасным сообщением. Поля `is_optimal` и `golden_steps_count` заполняются только при успешном достижении финиша, для сравнения с эталоном.
 
 **Почему так:** логика движения и валидация на сервере — единственный источник правды; клиент не может «схитрить». История шагов и финальная позиция нужны для визуализации на фронте.
 
@@ -284,9 +305,9 @@ password=password123
 
 ### GET `/execute/test`
 
-Тестовый запуск исполнителя на фиксированной карте. **Без авторизации.** Используется для отладки исполнителя Кумир.
+Тестовый запуск исполнителя на фиксированной карте. Доступен только админу и только если включен флаг `ENABLE_TEST_ENDPOINTS=true`; дополнительно ограничен rate-limit.
 
-**Response:** JSON с результатом выполнения тестового кода или полем `error`.
+**Response:** JSON с результатом выполнения тестового кода.
 
 **Почему так:** отдельный эндпоинт, чтобы не засорять основной POST и не требовать уровень из БД.
 
@@ -485,6 +506,38 @@ password=password123
 Жёсткое удаление новости из БД. **Response:** `204 No Content`.
 
 **Почему так:** новости не связаны с прогрессом пользователей, поэтому допустимо полное удаление; админка должна уметь убирать ошибочные или устаревшие записи.
+
+---
+
+## Community и публичные профили (добавлено)
+
+Новые/расширенные endpoints:
+
+- `GET /users/{username}/public` — публичный профиль по username.
+- `GET /users/by-id/{id}/public` — публичный профиль по user id (с `canonical_username`).
+- `GET /users/avatars/catalog` — каталог фиксированных SVG-аватаров.
+- `GET /users/avatars/{avatar_key}.svg` — выдача SVG-аватарки.
+- `GET /users/search?q=...&exclude_user_id=...` — поиск игроков по username + отображаемые титулы (единая стратегия поиска).
+- `GET /community/posts?author_id=...` — фильтр постов по автору.
+- `GET /community/posts?q=...` — поиск по заголовку и содержимому постов.
+- `POST /community/posts/{id}/bookmark` и `GET /community/bookmarks` — закладки постов.
+- `GET /community/subscriptions` и `POST /community/subscriptions/{category}` — подписки на категории.
+- `GET /community/mentions` и `POST /community/mentions/{id}/read` — упоминания.
+- `GET /community/notifications` и `POST /community/notifications/{id}/read` — уведомления.
+- `POST /community/notifications/mark-read-bulk` — bulk action "отметить всё как прочитанное".
+- `GET /levels/offline-package` — офлайн-пакет уровней и прогресса текущего пользователя.
+- `WS /realtime/notifications/ws?token=...` — realtime unread-count уведомлений.
+- `WS /realtime/levels/{level_id}/chat/ws?token=...` — realtime snapshot сообщений level-chat.
+- `GET /community/users` — совместимость для старого community user search (deprecated, заменяется `/users/search`).
+- `GET /community/reputation/leaderboard` — таблица лидеров по репутации.
+
+Примечания:
+
+- В `users/me` и публичных профилях добавлены поля `avatar_key` / `avatar_url`.
+- В `profile_preferences.privacy` добавлены:
+  - `hide_bio_on_public`
+  - `hide_tagline_on_public`
+- В ответах постов/комментариев/опросов добавлены avatar-поля автора.
 
 ---
 

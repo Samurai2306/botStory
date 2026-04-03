@@ -26,6 +26,16 @@
   border-bottom: 1px solid var(--border-glass);
 }
 
+.public-profile-avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 16px;
+  border: 1px solid var(--border-glass);
+  object-fit: cover;
+  margin: 0 auto 0.75rem;
+  display: block;
+}
+
 .public-profile-label {
   display: block;
   font-size: 0.7rem;

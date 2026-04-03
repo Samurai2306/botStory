@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -6,6 +6,7 @@ from app.db.database import get_db
 from app.db.models import Note, User
 from app.schemas.note import NoteCreate, NoteUpdate, NoteResponse
 from app.core.deps import get_current_user
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -13,8 +14,8 @@ router = APIRouter()
 @router.get("/", response_model=List[NoteResponse])
 async def list_notes(
     level_id: Optional[int] = None,
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(settings.PAGINATION_DEFAULT_LIMIT, ge=1, le=settings.PAGINATION_MAX_LIMIT_NOTES),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

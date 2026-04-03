@@ -16,6 +16,13 @@ DEFAULT_PROFILE_PREFERENCES: Dict[str, Any] = {
     "privacy": {
         "hide_stats_on_public": False,
         "hide_achievements_on_public": False,
+        "hide_bio_on_public": False,
+        "hide_tagline_on_public": False,
+    },
+    "notifications": {
+        "quiet_mode": False,
+        "digest_mode": "instant",
+        "push_in_app": False,
     },
 }
 

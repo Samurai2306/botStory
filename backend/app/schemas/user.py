@@ -27,6 +27,7 @@ class UserUpdate(BaseModel):
     terminal_theme: Optional[str] = None
     bio: Optional[str] = Field(None, max_length=500)
     tagline: Optional[str] = Field(None, max_length=120)
+    avatar_key: Optional[str] = Field(None, max_length=120)
     profile_preferences: Optional[Dict[str, Any]] = None
 
 
@@ -40,6 +41,8 @@ class UserResponse(UserBase):
     terminal_theme: Optional[str] = None
     bio: Optional[str] = None
     tagline: Optional[str] = None
+    avatar_key: Optional[str] = None
+    avatar_url: Optional[str] = None
     profile_preferences: Optional[Dict[str, Any]] = None
 
     class Config:
@@ -54,6 +57,13 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     user_id: Optional[int] = None
     role: Optional[UserRole] = None
+
+
+class UserSearchItem(BaseModel):
+    id: int
+    username: str
+    avatar_url: Optional[str] = None
+    matched_titles: list[str] = []
 
 
 def build_user_response(user: Any) -> UserResponse:
@@ -71,5 +81,7 @@ def build_user_response(user: Any) -> UserResponse:
         terminal_theme=user.terminal_theme,
         bio=user.bio,
         tagline=user.tagline,
+        avatar_key=getattr(user, "avatar_key", None),
+        avatar_url=(f"/api/v1/users/avatars/{user.avatar_key}.svg" if getattr(user, "avatar_key", None) else None),
         profile_preferences=merged_preferences(user.profile_preferences),
     )

@@ -1,7 +1,9 @@
 from datetime import timedelta
 
+import pytest
+
 from app.core import security
-from app.core.config import settings
+from app.core.config import Settings, settings
 
 
 def test_verify_password_roundtrip():
@@ -37,3 +39,13 @@ def test_create_access_token_uses_settings_ttl_when_no_delta(monkeypatch):
     payload = security.decode_token(token)
     assert payload is not None
     assert "exp" in payload
+
+
+def test_settings_secret_key_rejects_insecure_known_value():
+    with pytest.raises(ValueError, match="known insecure value"):
+        Settings(SECRET_KEY="changeme")
+
+
+def test_settings_secret_key_rejects_short_value():
+    with pytest.raises(ValueError, match="at least 32 characters"):
+        Settings(SECRET_KEY="short-secret-key")

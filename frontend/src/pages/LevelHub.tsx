@@ -16,6 +16,8 @@ interface Level {
   golden_steps_count?: number
 }
 
+const OFFLINE_LEVEL_PACKAGE_KEY = 'offline:levelsPackage:v1'
+
 /** Секции миссий по языкам: только Кумир пока с реальными уровнями */
 const LANGUAGE_SECTIONS = [
   { id: 'kumir', name: 'Кумир', short: 'Кумир', available: true, icon: '◇' },
@@ -32,10 +34,13 @@ export default function LevelHub() {
   const [levels, setLevels] = useState<Level[]>([])
   const [progressMap, setProgressMap] = useState<Record<number, { completed: boolean; best_steps_count?: number | null }>>({})
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'completed' | 'active' | 'worse'>('all')
   const [activeSection, setActiveSection] = useState<string>(LANGUAGE_SECTIONS[0].id)
+  const [offlineReadyAt, setOfflineReadyAt] = useState<string | null>(null)
 
   useEffect(() => {
+    setLoadError(null)
     Promise.all([levelAPI.getAll(), userAPI.getLevelProgress()])
       .then(([levelsRes, progressRes]) => {
         setLevels(levelsRes.data)
@@ -45,11 +50,43 @@ export default function LevelHub() {
         })
         setProgressMap(map)
       })
-      .catch(err => {
+      .catch((err) => {
+        const cachedRaw = localStorage.getItem(OFFLINE_LEVEL_PACKAGE_KEY)
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw) as { generated_at?: string; levels?: Level[]; progress?: { level_id: number; completed: boolean; best_steps_count?: number | null }[] }
+            setLevels(cached.levels || [])
+            const map: Record<number, { completed: boolean; best_steps_count?: number | null }> = {}
+            ;(cached.progress || []).forEach((p) => {
+              map[p.level_id] = { completed: p.completed, best_steps_count: p.best_steps_count }
+            })
+            setProgressMap(map)
+            setOfflineReadyAt(cached.generated_at || null)
+            return
+          } catch {
+            // fallback to regular error
+          }
+        }
+        const status = (err as any)?.response?.status
+        const detail = (err as any)?.response?.data?.detail
+        if (status) {
+          setLoadError(
+            `Не удалось загрузить миссии (HTTP ${status}).` +
+              (typeof detail === 'string' && detail.length ? ` ${detail}` : ''),
+          )
+        } else {
+          setLoadError('Не удалось загрузить миссии. Проверьте доступность API (VITE_API_URL / прокси) и что backend запущен.')
+        }
         console.error(err)
       })
       .finally(() => setLoading(false))
   }, [])
+
+  const prepareOfflinePackage = async () => {
+    const res = await levelAPI.getOfflinePackage()
+    localStorage.setItem(OFFLINE_LEVEL_PACKAGE_KEY, JSON.stringify(res.data))
+    setOfflineReadyAt(String(res.data?.generated_at || new Date().toISOString()))
+  }
 
   const filteredLevels = useMemo(() => {
     if (filter === 'all') return levels
@@ -80,6 +117,23 @@ export default function LevelHub() {
           <div className="spinner"></div>
           <div className="loading-text">ЗАГРУЗКА УРОВНЕЙ...</div>
         </div>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="level-hub">
+        <motion.div
+          className="no-levels"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="no-levels-icon">⚠</div>
+          <p>МИССИИ НЕ ЗАГРУЖЕНЫ</p>
+          <p style={{ maxWidth: '42rem', margin: '0 auto' }}>{loadError}</p>
+        </motion.div>
       </div>
     )
   }
@@ -161,6 +215,10 @@ export default function LevelHub() {
               ? 'пройдено хуже эталона'
               : 'в процессе'}
           </div>
+          <button type="button" className="filter-btn" onClick={() => void prepareOfflinePackage()}>
+            ⬇ Офлайн-пакет
+          </button>
+          {offlineReadyAt && <div className="level-count">Офлайн пакет: {new Date(offlineReadyAt).toLocaleString('ru-RU')}</div>}
         </motion.div>
       )}
 

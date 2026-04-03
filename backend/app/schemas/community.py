@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+import enum
+
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from app.db.models import PostCategory
@@ -30,7 +32,9 @@ class PostResponse(PostBase):
     likes_count: int = 0
     comments_count: int = 0
     author_username: Optional[str] = None
+    author_avatar_url: Optional[str] = None
     liked_by_me: bool = False
+    bookmarked_by_me: bool = False
 
     class Config:
         from_attributes = True
@@ -52,7 +56,9 @@ class CommentResponse(CommentBase):
     created_at: datetime
     updated_at: datetime
     author_username: Optional[str] = None
+    author_avatar_url: Optional[str] = None
     parent_username: Optional[str] = None  # кому отвечаем
+    parent_avatar_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -90,6 +96,7 @@ class PollResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     author_username: Optional[str] = None
+    author_avatar_url: Optional[str] = None
     options: List[PollOptionResponse]
     total_votes: int = 0
     voted_by_me: bool = False
@@ -101,3 +108,80 @@ class PollResponse(BaseModel):
 
 class PollVoteCreate(BaseModel):
     option_id: int
+
+
+class PollStateUpdate(BaseModel):
+    closed: bool
+
+
+class MentionResponse(BaseModel):
+    id: int
+    target_type: str
+    target_id: int
+    target_user_id: int
+    author_user_id: int
+    author_username: Optional[str] = None
+    created_at: datetime
+    is_read: bool = False
+
+
+class NotificationResponse(BaseModel):
+    id: int
+    type: str
+    title: str
+    body: Optional[str] = None
+    payload: Optional[dict] = None
+    is_read: bool = False
+    is_pinned: bool = False
+    created_at: datetime
+
+
+class NotificationUnreadCountResponse(BaseModel):
+    unread_count: int = 0
+
+
+class NotificationPinBody(BaseModel):
+    pinned: bool
+
+
+class NotificationBroadcastTheme(str, enum.Enum):
+    SYSTEM = "system"
+    IMPORTANT_UPDATE = "important_update"
+    MAINTENANCE = "maintenance"
+    COMMUNITY = "community"
+    GENERAL = "general"
+
+
+class NotificationBroadcastCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=180)
+    body: Optional[str] = Field(default=None, max_length=500)
+    theme: NotificationBroadcastTheme = NotificationBroadcastTheme.GENERAL
+
+
+class NotificationBroadcastResult(BaseModel):
+    recipients: int
+
+
+class BookmarkResponse(BaseModel):
+    post_id: int
+    created_at: datetime
+
+
+class CategorySubscriptionResponse(BaseModel):
+    category: PostCategory
+    created_at: datetime
+
+
+class ReputationLeaderboardRow(BaseModel):
+    user_id: int
+    username: str
+    avatar_url: Optional[str] = None
+    reputation_score: int
+
+
+class CommunityUserCard(BaseModel):
+    user_id: int
+    username: str
+    avatar_url: Optional[str] = None
+    reputation_score: int = 0
+    is_friend: bool = False

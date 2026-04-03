@@ -11,6 +11,8 @@ from app.api.v1.endpoints import (
     community,
     me_gamification,
     titles,
+    updates,
+    realtime,
 )
 
 api_router = APIRouter()
@@ -26,3 +28,5 @@ api_router.include_router(messages.router, prefix="/messages", tags=["Messages"]
 api_router.include_router(news.router, prefix="/news", tags=["News"])
 api_router.include_router(execute.router, prefix="/execute", tags=["Kumir Executor"])
 api_router.include_router(community.router, prefix="/community", tags=["Community"])
+api_router.include_router(updates.router, prefix="/updates", tags=["Updates"])
+api_router.include_router(realtime.router, prefix="/realtime", tags=["Realtime"])

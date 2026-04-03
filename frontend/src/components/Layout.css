@@ -14,6 +14,14 @@
   scroll-behavior: auto !important;
 }
 
+.layout--performance *,
+.layout--performance *::before,
+.layout--performance *::after {
+  animation: none !important;
+  transition: none !important;
+  backdrop-filter: none !important;
+}
+
 /* Navbar (в стиле лендинга — glass) */
 .navbar {
   position: relative;
@@ -121,12 +129,39 @@
   letter-spacing: 2px;
   font-size: 0.95rem;
   text-transform: uppercase;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   transition: all 0.3s ease;
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
   overflow: hidden;
+}
+
+.nav-bell {
+  min-width: 52px;
+  justify-content: center;
+}
+
+.nav-bell-icon {
+  font-size: 1.05rem;
+  filter: drop-shadow(0 0 8px rgba(139, 126, 216, 0.45));
+}
+
+.nav-bell-badge {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 0.65rem;
+  line-height: 18px;
+  text-align: center;
+  font-weight: 700;
+  padding: 0 4px;
+  box-shadow: 0 0 0 2px rgba(15, 12, 28, 0.9);
 }
 
 .nav-links a:hover,
@@ -192,6 +227,13 @@
   box-shadow: 0 0 15px rgba(139, 126, 216, 0.4);
 }
 
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 .user-name {
   font-weight: 600;
   color: var(--primary);
@@ -225,7 +267,16 @@ body.gameplay-fullscreen .main-content {
   padding: 0.5rem;
   background: rgba(139, 126, 216, 0.1);
   border: 1px solid var(--border-glass);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
+  min-height: var(--tap-target-min);
+  min-width: var(--tap-target-min);
+  box-shadow: none;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.menu-toggle::before {
+  display: none;
 }
 
 .menu-toggle span {
@@ -234,6 +285,14 @@ body.gameplay-fullscreen .main-content {
   background: var(--primary);
   transition: all 0.3s ease;
   box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.menu-toggle:focus-visible,
+.nav-links a:focus-visible,
+.nav-links button:focus-visible,
+.nav-user:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .menu-toggle.active span:nth-child(1) {

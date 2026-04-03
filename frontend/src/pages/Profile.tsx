@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { userAPI, gamificationAPI } from '../services/api'
+import { resolveApiUrl } from '../services/api'
+import CustomSelect from '../components/ui/CustomSelect'
 import './Profile.css'
 
 type AchievementRow = {
@@ -21,13 +23,10 @@ type EquippedSlot = {
   name?: string | null
 }
 
-type TitleLb = {
+type HeldTitle = {
   title_id: number
   slug: string
   name: string
-  description: string
-  holder_user_id?: number | null
-  holder_username?: string | null
 }
 
 type Tab = 'overview' | 'achievements' | 'titles'
@@ -37,7 +36,8 @@ export default function Profile() {
   const [tab, setTab] = useState<Tab>('overview')
   const [stats, setStats] = useState({ completed: 0, total: 0, progress_percent: 0 })
   const [achievements, setAchievements] = useState<AchievementRow[]>([])
-  const [leaderboard, setLeaderboard] = useState<TitleLb[]>([])
+  const [heldTitles, setHeldTitles] = useState<HeldTitle[]>([])
+  const [equippedSlots, setEquippedSlots] = useState<EquippedSlot[]>([])
   const [slot1, setSlot1] = useState<number | ''>('')
   const [slot2, setSlot2] = useState<number | ''>('')
   const [titlesSaving, setTitlesSaving] = useState(false)
@@ -58,14 +58,15 @@ export default function Profile() {
     if (tab === 'titles') {
       Promise.all([
         gamificationAPI.getEquippedTitles(),
-        gamificationAPI.getTitlesLeaderboard(),
+        gamificationAPI.getMyHeldTitles(),
       ])
-        .then(([eq, lb]) => {
+        .then(([eq, ht]) => {
           const rows = eq.data as EquippedSlot[]
+          setEquippedSlots(rows)
           const by = Object.fromEntries(rows.map((r) => [r.slot, r.title_id]))
           setSlot1((by[1] as number | undefined) ?? '')
           setSlot2((by[2] as number | undefined) ?? '')
-          setLeaderboard(lb.data as TitleLb[])
+          setHeldTitles(ht.data as HeldTitle[])
         })
         .catch(console.error)
     }
@@ -88,8 +89,13 @@ export default function Profile() {
         slot1_title_id: slot1 === '' ? null : Number(slot1),
         slot2_title_id: slot2 === '' ? null : Number(slot2),
       })
-      const eq = await gamificationAPI.getEquippedTitles()
+      const [eq, ht] = await Promise.all([
+        gamificationAPI.getEquippedTitles(),
+        gamificationAPI.getMyHeldTitles(),
+      ])
       const rows = eq.data as EquippedSlot[]
+      setEquippedSlots(rows)
+      setHeldTitles(ht.data as HeldTitle[])
       const by = Object.fromEntries(rows.map((r) => [r.slot, r.title_id]))
       setSlot1((by[1] as number | undefined) ?? '')
       setSlot2((by[2] as number | undefined) ?? '')
@@ -104,6 +110,36 @@ export default function Profile() {
 
   if (!user) return null
 
+  const heldIds = new Set(heldTitles.map((t) => t.title_id))
+  const slot1Row = equippedSlots.find((r) => r.slot === 1)
+  const slot2Row = equippedSlots.find((r) => r.slot === 2)
+
+  const slot1Options = [
+    { value: '', label: '—' },
+    ...heldTitles.map((t) => ({ value: String(t.title_id), label: t.name })),
+  ]
+  if (
+    slot1 !== '' &&
+    !heldIds.has(Number(slot1)) &&
+    slot1Row?.title_id === slot1 &&
+    slot1Row.name
+  ) {
+    slot1Options.push({ value: String(slot1), label: slot1Row.name })
+  }
+
+  const slot2Options = [
+    { value: '', label: '—' },
+    ...heldTitles.map((t) => ({ value: String(t.title_id), label: t.name })),
+  ]
+  if (
+    slot2 !== '' &&
+    !heldIds.has(Number(slot2)) &&
+    slot2Row?.title_id === slot2 &&
+    slot2Row.name
+  ) {
+    slot2Options.push({ value: String(slot2), label: slot2Row.name })
+  }
+
   const catLabel: Record<string, string> = {
     social: 'Социальные',
     progression: 'Прогресс',
@@ -116,7 +152,13 @@ export default function Profile() {
       <div className="profile-passport">
         <div className="profile-passport-top">
           <span className="profile-passport-id">UID // {user.id}</span>
-          <div className="profile-avatar">{user.username.charAt(0).toUpperCase()}</div>
+          <div className="profile-avatar">
+            {user.avatar_url ? (
+              <img src={resolveApiUrl(user.avatar_url) || ''} alt={`Аватар ${user.username}`} className="profile-avatar-img" />
+            ) : (
+              user.username.charAt(0).toUpperCase()
+            )}
+          </div>
         </div>
         <h1 className="glitch profile-username">{user.username}</h1>
         {user.tagline && <p className="profile-tagline">{user.tagline}</p>}
@@ -221,39 +263,23 @@ export default function Profile() {
           <div className="title-equip-row">
             <label>
               Слот 1
-              <select
-                value={slot1}
-                onChange={(e) =>
-                  setSlot1(e.target.value === '' ? '' : Number(e.target.value))
-                }
-              >
-                <option value="">—</option>
-                {leaderboard
-                  .filter((t) => t.holder_user_id === user.id)
-                  .map((t) => (
-                    <option key={t.title_id} value={t.title_id}>
-                      {t.name}
-                    </option>
-                  ))}
-              </select>
+              <CustomSelect
+                className="profile-title-select"
+                value={slot1 === '' ? '' : String(slot1)}
+                onChange={(value) => setSlot1(value === '' ? '' : Number(value))}
+                options={slot1Options}
+                ariaLabel="Выбор титула для слота 1"
+              />
             </label>
             <label>
               Слот 2
-              <select
-                value={slot2}
-                onChange={(e) =>
-                  setSlot2(e.target.value === '' ? '' : Number(e.target.value))
-                }
-              >
-                <option value="">—</option>
-                {leaderboard
-                  .filter((t) => t.holder_user_id === user.id)
-                  .map((t) => (
-                    <option key={t.title_id} value={t.title_id}>
-                      {t.name}
-                    </option>
-                  ))}
-              </select>
+              <CustomSelect
+                className="profile-title-select"
+                value={slot2 === '' ? '' : String(slot2)}
+                onChange={(value) => setSlot2(value === '' ? '' : Number(value))}
+                options={slot2Options}
+                ariaLabel="Выбор титула для слота 2"
+              />
             </label>
           </div>
           <button
@@ -265,19 +291,6 @@ export default function Profile() {
             {titlesSaving ? 'Сохранение…' : 'Сохранить слоты'}
           </button>
           {titlesMsg && <p className="profile-titles-msg">{titlesMsg}</p>}
-
-          <h2 className="profile-section-title">Лидерборд титулов</h2>
-          <ul className="title-lb-list">
-            {leaderboard.map((t) => (
-              <li key={t.slug}>
-                <strong>{t.name}</strong>
-                <span className="title-lb-holder">
-                  {t.holder_username || 'вакантно'}
-                </span>
-                <p>{t.description}</p>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
     </div>

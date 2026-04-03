@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -7,6 +7,7 @@ from app.db.models import Message, User, LevelProgress
 from app.schemas.message import MessageCreate, MessageResponse
 from app.core.deps import get_current_user, get_current_admin
 from app.services.gamification_hooks import sync_gamification_for_users
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -14,8 +15,8 @@ router = APIRouter()
 @router.get("/level/{level_id}", response_model=List[MessageResponse])
 async def get_level_messages(
     level_id: int,
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=settings.PAGINATION_MAX_LIMIT_CHAT),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

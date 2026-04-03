@@ -27,6 +27,9 @@ interface User {
   terminal_theme?: 'windows' | 'macos' | 'linux' | string | null
   bio?: string | null
   tagline?: string | null
+  avatar_key?: string | null
+  avatar_url?: string | null
+  reputation_score?: number
   profile_preferences?: ProfilePreferences | null
 }
 

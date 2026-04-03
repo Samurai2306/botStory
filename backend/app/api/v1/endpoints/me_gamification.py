@@ -15,6 +15,7 @@ from app.schemas.gamification import (
     AchievementItemResponse,
     EquippedTitleSlotResponse,
     EquippedTitlesUpdate,
+    HeldTitleItem,
 )
 from app.core.deps import get_current_user
 
@@ -55,6 +56,25 @@ async def get_my_achievements(
 
 
 def _equipped_slots(db: Session, user_id: int) -> List[EquippedTitleSlotResponse]:
+    existing_rows = (
+        db.query(UserEquippedTitle)
+        .filter(UserEquippedTitle.user_id == user_id)
+        .order_by(UserEquippedTitle.slot)
+        .all()
+    )
+    if not existing_rows:
+        available = (
+            db.query(TitleDefinition)
+            .join(TitleHolderState, TitleHolderState.title_id == TitleDefinition.id)
+            .filter(TitleHolderState.holder_user_id == user_id)
+            .order_by(TitleDefinition.id.asc())
+            .all()
+        )
+        for slot, td in enumerate(available[:2], start=1):
+            db.add(UserEquippedTitle(user_id=user_id, slot=slot, title_id=td.id))
+        if available:
+            db.commit()
+
     rows = (
         db.query(UserEquippedTitle, TitleDefinition)
         .join(TitleDefinition, UserEquippedTitle.title_id == TitleDefinition.id)
@@ -78,6 +98,21 @@ def _equipped_slots(db: Session, user_id: int) -> List[EquippedTitleSlotResponse
         else:
             result.append(EquippedTitleSlotResponse(slot=slot, title_id=None, slug=None, name=None))
     return result
+
+
+@router.get("/held-titles", response_model=List[HeldTitleItem])
+async def get_my_held_titles(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(TitleDefinition)
+        .join(TitleHolderState, TitleHolderState.title_id == TitleDefinition.id)
+        .filter(TitleHolderState.holder_user_id == current_user.id)
+        .order_by(TitleDefinition.id.asc())
+        .all()
+    )
+    return [HeldTitleItem(title_id=r.id, slug=r.slug, name=r.name) for r in rows]
 
 
 @router.get("/equipped-titles", response_model=List[EquippedTitleSlotResponse])

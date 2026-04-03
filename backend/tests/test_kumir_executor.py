@@ -1,6 +1,10 @@
 import pytest
 
 from kumir.executor import KumirExecutor, normalize_map, TileType
+from app.core.config import settings
+from app.api.v1.endpoints.execute import _test_endpoint_hits_by_ip
+from app.db.models import User, UserRole
+from app.core.security import get_password_hash
 
 
 def _minimal_old_map():
@@ -66,8 +70,84 @@ def test_missing_start_raises():
 
 
 def test_execute_test_endpoint_map_from_api(client):
-    r = client.get("/api/v1/execute/test")
-    assert r.status_code == 200
-    data = r.json()
-    assert data.get("success") is True
-    assert data.get("reached_finish") is True
+    original_flag = settings.ENABLE_TEST_ENDPOINTS
+    try:
+        settings.ENABLE_TEST_ENDPOINTS = False
+        r = client.get("/api/v1/execute/test")
+        assert r.status_code == 401
+    finally:
+        settings.ENABLE_TEST_ENDPOINTS = original_flag
+
+
+def test_execute_test_endpoint_requires_admin_and_flag(client, db_session):
+    original_flag = settings.ENABLE_TEST_ENDPOINTS
+    try:
+        settings.ENABLE_TEST_ENDPOINTS = True
+        admin = User(
+            email="admin_test_exec@example.com",
+            username="admin_test_exec",
+            password_hash=get_password_hash("secret123"),
+            role=UserRole.ADMIN,
+            is_active=True,
+        )
+        db_session.add(admin)
+        db_session.commit()
+        login = client.post("/api/v1/auth/login", data={"username": admin.email, "password": "secret123"})
+        assert login.status_code == 200
+        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+        r = client.get("/api/v1/execute/test", headers=headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data.get("success") is True
+    finally:
+        settings.ENABLE_TEST_ENDPOINTS = original_flag
+
+
+def test_execute_test_endpoint_returns_404_for_admin_when_flag_disabled(client, db_session):
+    _test_endpoint_hits_by_ip.clear()
+    original_flag = settings.ENABLE_TEST_ENDPOINTS
+    try:
+        settings.ENABLE_TEST_ENDPOINTS = False
+        admin = User(
+            email="admin_test_exec_off@example.com",
+            username="admin_test_exec_off",
+            password_hash=get_password_hash("secret123"),
+            role=UserRole.ADMIN,
+            is_active=True,
+        )
+        db_session.add(admin)
+        db_session.commit()
+        login = client.post("/api/v1/auth/login", data={"username": admin.email, "password": "secret123"})
+        assert login.status_code == 200
+        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+        r = client.get("/api/v1/execute/test", headers=headers)
+        assert r.status_code == 404
+    finally:
+        settings.ENABLE_TEST_ENDPOINTS = original_flag
+
+
+def test_execute_test_endpoint_rate_limited(client, db_session):
+    _test_endpoint_hits_by_ip.clear()
+    original_flag = settings.ENABLE_TEST_ENDPOINTS
+    try:
+        settings.ENABLE_TEST_ENDPOINTS = True
+        admin = User(
+            email="admin_test_exec_rl@example.com",
+            username="admin_test_exec_rl",
+            password_hash=get_password_hash("secret123"),
+            role=UserRole.ADMIN,
+            is_active=True,
+        )
+        db_session.add(admin)
+        db_session.commit()
+        login = client.post("/api/v1/auth/login", data={"username": admin.email, "password": "secret123"})
+        assert login.status_code == 200
+        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+        for _ in range(20):
+            ok = client.get("/api/v1/execute/test", headers=headers)
+            assert ok.status_code == 200
+        limited = client.get("/api/v1/execute/test", headers=headers)
+        assert limited.status_code == 429
+        assert limited.json()["error_code"] == "RATE_LIMITED"
+    finally:
+        settings.ENABLE_TEST_ENDPOINTS = original_flag

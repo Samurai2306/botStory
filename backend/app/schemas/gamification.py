@@ -28,6 +28,12 @@ class EquippedTitleSlotResponse(BaseModel):
     name: Optional[str] = None
 
 
+class HeldTitleItem(BaseModel):
+    title_id: int
+    slug: str
+    name: str
+
+
 class TitleLeaderboardRow(BaseModel):
     title_id: int
     slug: str
@@ -59,8 +65,11 @@ class PublicProfileTitle(BaseModel):
 class PublicUserProfileResponse(BaseModel):
     id: int
     username: str
+    canonical_username: Optional[str] = None
     bio: Optional[str] = None
     tagline: Optional[str] = None
+    avatar_key: Optional[str] = None
+    avatar_url: Optional[str] = None
     completed_levels: Optional[int] = None
     total_active_levels: Optional[int] = None
     progress_percent: Optional[int] = None

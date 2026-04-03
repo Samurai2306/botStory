@@ -1,16 +1,17 @@
-import { useEffect, useState, useCallback } from 'react'
+import { lazy, Suspense, useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { levelAPI, executeAPI } from '../services/api'
 import IsometricCanvas from '../components/IsometricCanvas'
 import CodeEditor from '../components/CodeEditor'
 import CodePanelTerminal from '../components/CodePanelTerminal'
-import LevelChat from '../components/LevelChat'
 import Debriefing from '../components/Debriefing'
 import { useAuthStore } from '../store/authStore'
 import { mergeProfilePreferences } from '../types/profile'
 import './GamePlay.css'
 
 const BODY_FULLSCREEN_CLASS = 'gameplay-fullscreen'
+const DRAFT_SAVE_DEBOUNCE_MS = 400
+const LevelChat = lazy(() => import('../components/LevelChat'))
 
 interface Level {
   id: number
@@ -18,6 +19,23 @@ interface Level {
   map_data: any
   narrative?: string
   golden_steps_count?: number
+}
+
+type QueuedProgressPayload = { levelId: number; user_code: string; steps_count: number }
+const PROGRESS_QUEUE_KEY = 'offline:progressQueue'
+
+function readProgressQueue(): QueuedProgressPayload[] {
+  try {
+    const raw = localStorage.getItem(PROGRESS_QUEUE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeProgressQueue(items: QueuedProgressPayload[]) {
+  localStorage.setItem(PROGRESS_QUEUE_KEY, JSON.stringify(items))
 }
 
 export default function GamePlay() {
@@ -38,6 +56,27 @@ export default function GamePlay() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [codePanelView, setCodePanelView] = useState<'terminal' | 'ide'>('terminal')
   const [showChat, setShowChat] = useState(false)
+  const [runHint, setRunHint] = useState<string | null>(null)
+  const draftSaveTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const flush = async () => {
+      const queue = readProgressQueue()
+      if (!queue.length) return
+      const rest: QueuedProgressPayload[] = []
+      for (const item of queue) {
+        try {
+          await levelAPI.submitSolution(item.levelId, { user_code: item.user_code, steps_count: item.steps_count })
+        } catch {
+          rest.push(item)
+        }
+      }
+      writeProgressQueue(rest)
+    }
+    void flush()
+    window.addEventListener('online', flush)
+    return () => window.removeEventListener('online', flush)
+  }, [])
 
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen(prev => {
@@ -60,8 +99,41 @@ export default function GamePlay() {
     }
   }, [id])
 
+  useEffect(() => {
+    if (!level?.id) return
+    const key = `level:draft:${level.id}`
+    const saved = localStorage.getItem(key)
+    if (saved && !code.trim()) setCode(saved)
+  }, [level?.id])
+
+  useEffect(() => {
+    if (!level?.id) return
+    const key = `level:draft:${level.id}`
+    if (draftSaveTimerRef.current != null) {
+      window.clearTimeout(draftSaveTimerRef.current)
+    }
+    draftSaveTimerRef.current = window.setTimeout(() => {
+      localStorage.setItem(key, code)
+      draftSaveTimerRef.current = null
+    }, DRAFT_SAVE_DEBOUNCE_MS)
+
+    return () => {
+      if (draftSaveTimerRef.current != null) {
+        window.clearTimeout(draftSaveTimerRef.current)
+        draftSaveTimerRef.current = null
+      }
+      // Flush latest draft on effect cleanup/unmount.
+      localStorage.setItem(key, code)
+    }
+  }, [level?.id, code])
+
   const handleExecute = async () => {
-    if (!level || !code.trim()) return
+    if (!level) return
+    if (!code.trim()) {
+      setRunHint('Добавьте команды в редактор перед запуском. Например: "вперед"')
+      return
+    }
+    setRunHint(null)
     
     setIsExecuting(true)
     setExecutionResult(null)
@@ -100,9 +172,15 @@ export default function GamePlay() {
         if (lastErr) {
           const msg = lastErr?.response?.data?.detail ?? lastErr?.message ?? 'Ошибка сети'
           const text = Array.isArray(msg) ? msg[0]?.msg ?? String(msg) : String(msg)
-          const hint = !lastErr?.response && (lastErr?.message === 'Network Error' || lastErr?.code === 'ERR_NETWORK')
-            ? ' Проверьте, что бэкенд запущен (например: docker-compose up -d или uvicorn на порту 8000).'
+          const isNetworkError = !lastErr?.response && (lastErr?.message === 'Network Error' || lastErr?.code === 'ERR_NETWORK')
+          const hint = isNetworkError
+            ? ' Нет сети: решение сохранено локально и отправится автоматически при восстановлении соединения.'
             : ''
+          if (isNetworkError) {
+            const queue = readProgressQueue()
+            queue.push({ levelId, ...payload })
+            writeProgressQueue(queue)
+          }
           setProgressSaveError(text + hint)
           console.error('Не удалось сохранить прогресс:', lastErr?.response?.data ?? lastErr)
         }
@@ -230,7 +308,9 @@ export default function GamePlay() {
               </button>
             </div>
             <div className="chat-modal-body">
-              <LevelChat levelId={level.id} />
+              <Suspense fallback={<div className="community-loading"><div className="spinner" /> Загрузка чата...</div>}>
+                <LevelChat levelId={level.id} />
+              </Suspense>
             </div>
           </div>
         </div>
@@ -240,6 +320,12 @@ export default function GamePlay() {
         <div className="error-panel">
           <h3>Ошибка!</h3>
           <p>{executionResult.error}</p>
+        </div>
+      )}
+      {runHint && (
+        <div className="error-panel">
+          <h3>Пустой запуск</h3>
+          <p>{runHint}</p>
         </div>
       )}
     </div>

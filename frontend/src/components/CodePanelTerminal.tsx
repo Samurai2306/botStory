@@ -5,8 +5,14 @@ import './CodePanelTerminal.css'
 
 const PROMPT = 'user@botstory:~$'
 const TYPEWRITER_CHAR_MS = 28
+const MAX_TERMINAL_LINES = 180
 
 type LineEntry = { type: 'cmd' | 'out' | 'sys' | 'link'; text: string; visibleLength?: number; href?: string }
+
+function trimTerminalLines(lines: LineEntry[]): LineEntry[] {
+  if (lines.length <= MAX_TERMINAL_LINES) return lines
+  return lines.slice(lines.length - MAX_TERMINAL_LINES)
+}
 
 interface CodePanelTerminalProps {
   onSwitchToIde: () => void
@@ -55,7 +61,7 @@ export default function CodePanelTerminal({
         const pending = pendingOutputRef.current
         if (pending.length > 0) {
           pendingOutputRef.current = []
-          setLines((prev) => [...prev.slice(0, -1), { ...last, visibleLength: undefined }, ...pending])
+          setLines((prev) => trimTerminalLines([...prev.slice(0, -1), { ...last, visibleLength: undefined }, ...pending]))
         } else {
           setLines((prev) => {
             const p = prev.slice()
@@ -97,7 +103,7 @@ export default function CodePanelTerminal({
       return
     }
 
-    setLines((prev) => [...prev, { type: 'cmd', text: fullCmd, visibleLength: 0 }])
+    setLines((prev) => trimTerminalLines([...prev, { type: 'cmd', text: fullCmd, visibleLength: 0 }]))
     setInput('')
 
     if (cmd === 'run' && rest.length > 0 && rest[0].toLowerCase() === 'codeide') {

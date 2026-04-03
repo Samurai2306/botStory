@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { userAPI } from '../services/api'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { userAPI, communityAPI } from '../services/api'
+import { resolveApiUrl } from '../services/api'
 import './PublicUserProfile.css'
 
 type PublicAchievement = {
@@ -30,8 +31,10 @@ type EquippedSlot = {
 type PublicBody = {
   id: number
   username: string
+  canonical_username?: string | null
   bio?: string | null
   tagline?: string | null
+  avatar_url?: string | null
   completed_levels?: number | null
   total_active_levels?: number | null
   progress_percent?: number | null
@@ -40,19 +43,37 @@ type PublicBody = {
   equipped_titles: EquippedSlot[]
 }
 
+type PublicPost = {
+  id: number
+  title: string
+  created_at: string
+}
+
 export default function PublicUserProfile() {
-  const { username } = useParams<{ username: string }>()
+  const { username, id } = useParams<{ username?: string; id?: string }>()
+  const navigate = useNavigate()
   const [data, setData] = useState<PublicBody | null>(null)
+  const [posts, setPosts] = useState<PublicPost[]>([])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!username) return
+    if (!username && !id) return
     setError(null)
-    userAPI
-      .getPublicProfile(username)
-      .then((res) => setData(res.data as PublicBody))
+    const req = id
+      ? userAPI.getPublicProfileById(Number(id))
+      : userAPI.getPublicProfile(username as string)
+    req
+      .then((res) => {
+        const body = res.data as PublicBody
+        setData(body)
+        if (id && body.canonical_username) {
+          navigate(`/user/${encodeURIComponent(body.canonical_username)}`, { replace: true })
+        }
+        return communityAPI.getPosts({ author_id: body.id, limit: 5 })
+      })
+      .then((res) => setPosts((res.data || []).map((p: any) => ({ id: p.id, title: p.title, created_at: p.created_at }))))
       .catch(() => setError('Профиль не найден или недоступен'))
-  }, [username])
+  }, [username, id, navigate])
 
   if (error || !data) {
     return (
@@ -72,6 +93,9 @@ export default function PublicUserProfile() {
       <div className="public-profile-card">
         <div className="public-profile-passport">
           <span className="public-profile-label">OPERATOR</span>
+          {data.avatar_url ? (
+            <img className="public-profile-avatar" src={resolveApiUrl(data.avatar_url) || ''} alt={`Аватар ${data.username}`} />
+          ) : null}
           <h1 className="glitch public-profile-name">{data.username}</h1>
           {data.tagline && <p className="public-profile-tagline">{data.tagline}</p>}
           {data.bio && <p className="public-profile-bio">{data.bio}</p>}
@@ -96,6 +120,22 @@ export default function PublicUserProfile() {
         {statsHidden && (
           <p className="public-profile-hidden-note">Пользователь скрыл детальную статистику.</p>
         )}
+
+        <section className="public-profile-section">
+          <h2>Активность в сообществе</h2>
+          {posts.length === 0 ? (
+            <p className="public-profile-muted">Пока нет публикаций.</p>
+          ) : (
+            <ul className="public-profile-title-list">
+              {posts.map((p) => (
+                <li key={p.id}>
+                  <Link to={`/community?post=${p.id}`}>{p.title}</Link>
+                  <p>{new Date(p.created_at).toLocaleDateString('ru-RU')}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         <section className="public-profile-section">
           <h2>Титулы в слотах</h2>
@@ -125,20 +165,6 @@ export default function PublicUserProfile() {
               ))}
             </ul>
           )}
-        </section>
-
-        <section className="public-profile-section">
-          <h2>Титулы платформы</h2>
-          <ul className="public-profile-title-list">
-            {data.titles.map((t) => (
-              <li key={t.slug} className={t.is_current_holder ? 'is-holder' : ''}>
-                <strong>{t.name}</strong>
-                {t.is_current_holder && <span className="badge">держит</span>}
-                {t.ever_held && !t.is_current_holder && <span className="badge muted">был(а)</span>}
-                <p>{t.description}</p>
-              </li>
-            ))}
-          </ul>
         </section>
 
         <Link to="/" className="public-profile-back">

@@ -1,15 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from collections import defaultdict, deque
+import time
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 
 from app.db.database import get_db
 from app.db.models import Level, User
-from app.core.deps import get_current_user
+from app.core.deps import get_current_admin, get_current_user
+from app.core.config import settings
 from kumir.executor import KumirExecutor, ExecutionError
 from kumir.loop_detect import kumir_code_contains_loop
 
 router = APIRouter()
+_test_endpoint_hits_by_ip: dict[str, deque[float]] = defaultdict(deque)
 
 
 class ExecuteRequest(BaseModel):
@@ -65,18 +69,38 @@ async def execute_code(
     except ExecutionError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail=e.public_message if hasattr(e, "public_message") else "Code execution failed"
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Execution error: {str(e)}"
+            detail="Code execution failed"
         )
 
 
 @router.get("/test")
-async def test_executor():
+async def test_executor(
+    request: Request,
+    _current_user: User = Depends(get_current_admin),
+):
     """Test executor with simple map (старт → финиш за 3 шага)"""
+    if not settings.ENABLE_TEST_ENDPOINTS:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    ip = request.client.host if request.client and request.client.host else "unknown"
+    now = time.time()
+    hits = _test_endpoint_hits_by_ip[ip]
+    cutoff = now - 60
+    while hits and hits[0] < cutoff:
+        hits.popleft()
+    if len(hits) >= 20:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many test requests",
+            headers={"Retry-After": "60"},
+        )
+    hits.append(now)
+
     test_map = {
         "width": 3,
         "height": 3,
@@ -97,5 +121,5 @@ async def test_executor():
         executor = KumirExecutor(test_map)
         result = executor.execute(test_code)
         return result
-    except Exception as e:
-        return {"error": str(e)}
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Test execution failed")

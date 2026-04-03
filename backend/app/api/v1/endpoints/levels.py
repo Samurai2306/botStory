@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -11,21 +11,58 @@ from app.schemas.level import (
 )
 from app.schemas.level_words import LevelWordsUpdate, LevelWordsResponse
 from app.core.deps import get_current_user, get_current_admin, get_optional_user
+from app.core.config import settings
 from kumir.loop_detect import kumir_code_contains_loop
+from kumir.executor import KumirExecutor
 from app.services.gamification_hooks import sync_gamification_for_users
 
 router = APIRouter()
 
 
+@router.get("/offline-package")
+async def get_offline_package(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    levels = db.query(Level).filter(Level.is_active == True).order_by(Level.order).all()
+    progress_rows = db.query(LevelProgress).filter(LevelProgress.user_id == current_user.id).all()
+    return {
+        "generated_at": datetime.utcnow().isoformat(),
+        "levels": [
+            {
+                "id": l.id,
+                "title": l.title,
+                "description": l.description,
+                "order": l.order,
+                "difficulty": l.difficulty,
+                "is_active": bool(l.is_active),
+                "golden_steps_count": l.golden_steps_count,
+            }
+            for l in levels
+        ],
+        "progress": [
+            {
+                "level_id": p.level_id,
+                "completed": bool(p.completed),
+                "best_steps_count": p.best_steps_count,
+            }
+            for p in progress_rows
+        ],
+    }
+
+
 @router.get("/", response_model=List[LevelResponse])
 async def list_levels(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(settings.PAGINATION_DEFAULT_LIMIT, ge=1, le=settings.PAGINATION_MAX_LIMIT_GENERAL),
+    include_inactive: bool = False,
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user)
 ):
     """List all active levels"""
-    query = db.query(Level).filter(Level.is_active == True).order_by(Level.order)
+    query = db.query(Level).order_by(Level.order)
+    if not include_inactive or not current_user or current_user.role != UserRole.ADMIN:
+        query = query.filter(Level.is_active == True)
     levels = query.offset(skip).limit(limit).all()
     return levels
 
@@ -205,6 +242,20 @@ async def submit_level_solution(
                 detail="Level not found"
             )
         
+        # Server-side validation: never trust client-reported completion and step count.
+        execution = KumirExecutor(level.map_data).execute(progress_data.user_code)
+        if not execution.get("success") or not execution.get("reached_finish"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Solution is invalid: finish is not reached",
+            )
+        server_steps_count = int(execution.get("steps_count") or 0)
+        if progress_data.steps_count != server_steps_count:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="steps_count mismatch with server execution",
+            )
+
         # Get or create progress
         progress = db.query(LevelProgress).filter(
             LevelProgress.level_id == level_id,
@@ -217,22 +268,22 @@ async def submit_level_solution(
                 user_id=current_user.id,
                 level_id=level_id,
                 attempts=0,
-                steps_count=progress_data.steps_count,
+                steps_count=server_steps_count,
                 user_code=progress_data.user_code,
                 completed=True,
                 completed_at=datetime.utcnow(),
-                best_steps_count=progress_data.steps_count,
+                best_steps_count=server_steps_count,
                 completed_ever_without_loops=(not code_has_loop),
             )
             db.add(progress)
         else:
             progress.attempts = (progress.attempts or 0) + 1
             progress.user_code = progress_data.user_code
-            progress.steps_count = progress_data.steps_count
+            progress.steps_count = server_steps_count
             progress.completed = True
             progress.completed_at = datetime.utcnow()
-            if progress.best_steps_count is None or progress_data.steps_count < progress.best_steps_count:
-                progress.best_steps_count = progress_data.steps_count
+            if progress.best_steps_count is None or server_steps_count < progress.best_steps_count:
+                progress.best_steps_count = server_steps_count
             if not code_has_loop:
                 progress.completed_ever_without_loops = True
 
@@ -243,9 +294,9 @@ async def submit_level_solution(
         return progress
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to save progress: {str(e)}"
+            detail="Failed to save progress"
         )
